@@ -36,7 +36,7 @@ UI uses, so the assistant cannot do anything the user couldn't do.
 ```
    ┌───────────────────────────┐                ┌──────────────────────────┐
    │ Next.js 15 frontend (TS)  │   REST + SSE   │ Spring Boot API (Java)   │
-   │   · /agenda  week view    │ ─────────────▶ │   · /api/events          │
+   │   · /agenda  week view    │ ─────────────▶    · /api/events          |
    │   · /chat    Claude panel │                │   · /api/tasks           │
    │   · /login   Google OAuth │                │   · /api/assistant/chat  │
    │   · /settings .ics URL    │                │   · /api/ics/{token}     │
@@ -45,7 +45,7 @@ UI uses, so the assistant cannot do anything the user couldn't do.
                  │ session cookie                            │
                  ▼                                           ▼
         ┌────────────────┐                          ┌────────────────────┐
-        │ Google IdP     │ ◀─ OAuth2 code flow ──── │ Spring Security    │
+        │ Google IdP     │ ◀─ OAuth2 code flow ──── | Spring Security   |
         │ accounts.      │                          │ oauth2Login filter │
         │ google.com     │                          └────────────────────┘
         └────────────────┘                                   │

@@ -6,6 +6,7 @@ import { DayDetailDialog } from "@/components/DayDetailDialog";
 import { EventEditDialog } from "@/components/EventEditDialog";
 import { addDays, formatWeekday, isSameDay, isWeekend } from "@/lib/week";
 import { formatTime } from "@/lib/format";
+import { eventsForDay, type EventSlice } from "@/lib/eventSlices";
 import { usePreferences } from "@/components/PreferencesProvider";
 import type { EventResponse } from "@/lib/types";
 
@@ -41,12 +42,6 @@ export function WeekView({
   const isPastEvent = (event: EventResponse) =>
     new Date(event.endsAt).getTime() < nowMs;
 
-  const byDay: Record<string, EventResponse[]> = {};
-  for (const event of events) {
-    const key = new Date(event.startsAt).toDateString();
-    (byDay[key] ??= []).push(event);
-  }
-
   return (
     <>
       <div
@@ -56,40 +51,55 @@ export function WeekView({
         }
       >
         {days.map((day) => {
-          const key = day.toDateString();
-          const list = byDay[key] ?? [];
           const isToday = isSameDay(day, today);
+          const bucket = eventsForDay(events, day);
 
-          // On today, optionally drop events that have already ended. Past
-          // days keep all of theirs (just dimmed) per the setting's intent.
-          const visibleList =
+          // hidePastEventsToday filters today's already-finished events out
+          // of both buckets. Past days keep theirs (rendered dim).
+          const allDay =
             isToday && prefs.hidePastEventsToday
-              ? list.filter((e) => !isPastEvent(e))
-              : list;
-          const isEmpty = visibleList.length === 0;
+              ? bucket.allDay.filter((s) => !isPastEvent(s.event))
+              : bucket.allDay;
+          const timed =
+            isToday && prefs.hidePastEventsToday
+              ? bucket.timed.filter((s) => !isPastEvent(s.event))
+              : bucket.timed;
+
+          const totalRaw = bucket.allDay.length + bucket.timed.length;
+          const totalShown = allDay.length + timed.length;
+          const hiddenCount = totalRaw - totalShown;
+          const isEmpty = totalShown === 0;
           const emptyMessage =
-            list.length > 0 && isToday && prefs.hidePastEventsToday
+            totalRaw > 0 && isToday && prefs.hidePastEventsToday
               ? "Nothing left today"
               : "No events";
 
+          // The DayDetailDialog wants the original events that overlap this
+          // day, not the slices.
+          const dayEvents = [
+            ...bucket.allDay.map((s) => s.event),
+            ...bucket.timed.map((s) => s.event),
+          ];
+
           return (
             <DayCard
-              key={key}
+              key={day.toDateString()}
               day={day}
               isToday={isToday}
               isEmpty={isEmpty}
               emptyMessage={emptyMessage}
-              visibleList={visibleList}
-              hiddenCount={list.length - visibleList.length}
+              allDay={allDay}
+              timed={timed}
+              hiddenCount={hiddenCount}
               hidPastNote={Boolean(
                 isToday &&
                   prefs.hidePastEventsToday &&
-                  list.length > visibleList.length,
+                  hiddenCount > 0,
               )}
               timeFormat={prefs.timeFormat}
               isPastEvent={isPastEvent}
               onOpenDay={() =>
-                setShowingDay({ day, events: visibleList, isToday })
+                setShowingDay({ day, events: dayEvents, isToday })
               }
               onEditEvent={setEditing}
             />
@@ -124,7 +134,8 @@ function DayCard({
   isToday,
   isEmpty,
   emptyMessage,
-  visibleList,
+  allDay,
+  timed,
   hiddenCount,
   hidPastNote,
   timeFormat,
@@ -136,7 +147,8 @@ function DayCard({
   isToday: boolean;
   isEmpty: boolean;
   emptyMessage: string;
-  visibleList: EventResponse[];
+  allDay: EventSlice[];
+  timed: EventSlice[];
   hiddenCount: number;
   hidPastNote: boolean;
   timeFormat: "12h" | "24h";
@@ -147,9 +159,10 @@ function DayCard({
   const dateNum = day.getDate();
   const monthShort = day.toLocaleDateString(undefined, { month: "short" });
   const weekdayShort = formatWeekday(day).split(" ")[0]; // just "Thu"
+  const totalShown = allDay.length + timed.length;
   const ariaLabel =
     `${day.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}` +
-    `, ${visibleList.length} ${visibleList.length === 1 ? "event" : "events"}` +
+    `, ${totalShown} ${totalShown === 1 ? "event" : "events"}` +
     " — tap to view";
 
   return (
@@ -209,22 +222,41 @@ function DayCard({
           {emptyMessage}
         </p>
       ) : (
-        <ul className="mt-3 space-y-1.5 lg:mt-2 lg:space-y-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
-          {visibleList.map((event) => (
-            <EventPill
-              key={event.id}
-              event={event}
-              timeFormat={timeFormat}
-              past={isPastEvent(event)}
-              onEdit={() => onEditEvent(event)}
-            />
-          ))}
-        </ul>
+        <div className="mt-3 flex min-h-0 flex-1 flex-col gap-2 lg:mt-2 lg:gap-1.5 lg:overflow-y-auto lg:pr-1">
+          {allDay.length > 0 && (
+            <ul className="space-y-1">
+              {allDay.map((slice) => (
+                <AllDayPill
+                  key={slice.event.id}
+                  slice={slice}
+                  past={isPastEvent(slice.event)}
+                  onEdit={() => onEditEvent(slice.event)}
+                />
+              ))}
+            </ul>
+          )}
+          {allDay.length > 0 && timed.length > 0 && (
+            <hr className="border-divider/60" aria-hidden />
+          )}
+          {timed.length > 0 && (
+            <ul className="space-y-1">
+              {timed.map((slice) => (
+                <TimedPill
+                  key={slice.event.id}
+                  slice={slice}
+                  timeFormat={timeFormat}
+                  past={isPastEvent(slice.event)}
+                  onEdit={() => onEditEvent(slice.event)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {!isEmpty && (
         <p className="mt-3 shrink-0 text-[11px] text-ink-muted lg:mt-1.5 lg:text-[10px] lg:text-ink-subtle">
-          {visibleList.length} {visibleList.length === 1 ? "event" : "events"}
+          {totalShown} {totalShown === 1 ? "event" : "events"}
           {hidPastNote && (
             <span className="ml-1">· {hiddenCount} hidden</span>
           )}
@@ -237,28 +269,21 @@ function DayCard({
   );
 }
 
-function EventPill({
-  event,
-  timeFormat,
+/** Render an all-day event row — full-width, brand-tinted, with optional
+ *  continuation chevrons when it spans into / from neighboring days. */
+function AllDayPill({
+  slice,
   past,
   onEdit,
 }: {
-  event: EventResponse;
-  timeFormat: "12h" | "24h";
+  slice: EventSlice;
   past: boolean;
   onEdit: () => void;
 }) {
-  const tooltip = [
-    event.title,
-    event.allDay
-      ? "All day"
-      : `${formatTime(event.startsAt, timeFormat)}–${formatTime(event.endsAt, timeFormat)}`,
-    event.location || undefined,
-    past ? "(ended)" : undefined,
-    "double-click to edit",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const { event, isStart, isEnd, isMultiDay } = slice;
+  const continuesLeft = isMultiDay && !isStart;
+  const continuesRight = isMultiDay && !isEnd;
+  const tooltip = buildTooltip(event, slice, "all-day");
 
   return (
     <li
@@ -268,11 +293,95 @@ function EventPill({
         e.stopPropagation();
         onEdit();
       }}
-      onClick={(e) => {
-        // Let the outer day-card click open the modal on mobile.
-        // On desktop, single-clicks here are no-ops; double-click edits.
-        e.stopPropagation();
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          onEdit();
+        }
       }}
+      role="button"
+      tabIndex={0}
+      className={
+        "group flex cursor-pointer select-none items-center gap-1.5 rounded-md bg-brand-soft px-1.5 py-1 text-xs text-brand transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand " +
+        (past ? "opacity-45 hover:opacity-80" : "")
+      }
+    >
+      {continuesLeft ? (
+        <span aria-hidden className="text-[10px] leading-none">◂</span>
+      ) : (
+        <span aria-hidden className="font-mono text-[10px] uppercase tracking-wide opacity-70">
+          ALL
+        </span>
+      )}
+      <span
+        className={
+          "truncate font-medium " + (past ? "line-through decoration-1" : "")
+        }
+      >
+        {event.title}
+      </span>
+      {continuesRight && (
+        <span aria-hidden className="ml-auto text-[10px] leading-none">
+          ▸
+        </span>
+      )}
+    </li>
+  );
+}
+
+/** Render a single-day timed event, or the start / end day of a multi-day
+ *  timed event. Middle days route to AllDayPill instead. */
+function TimedPill({
+  slice,
+  timeFormat,
+  past,
+  onEdit,
+}: {
+  slice: EventSlice;
+  timeFormat: "12h" | "24h";
+  past: boolean;
+  onEdit: () => void;
+}) {
+  const { event, isStart, isMultiDay } = slice;
+  const tooltip = buildTooltip(event, slice, "timed", timeFormat);
+
+  // Time chip semantics:
+  //   single-day: HH:mm (start)
+  //   multi-day start: HH:mm →
+  //   multi-day end:   → HH:mm
+  let timeChip: React.ReactNode;
+  if (!isMultiDay) {
+    timeChip = (
+      <span className="font-mono text-[10px] tabular-nums text-ink-muted">
+        {formatTime(event.startsAt, timeFormat)}
+      </span>
+    );
+  } else if (isStart) {
+    timeChip = (
+      <span className="font-mono text-[10px] tabular-nums text-ink-muted">
+        {formatTime(event.startsAt, timeFormat)} ▸
+      </span>
+    );
+  } else {
+    // isEnd
+    timeChip = (
+      <span className="font-mono text-[10px] tabular-nums text-ink-muted">
+        ◂ {formatTime(event.endsAt, timeFormat)}
+      </span>
+    );
+  }
+
+  return (
+    <li
+      title={tooltip}
+      aria-label={tooltip}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onEdit();
+      }}
+      onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -294,15 +403,7 @@ function EventPill({
           (past ? "bg-ink-subtle" : "bg-brand")
         }
       />
-      {event.allDay ? (
-        <span className="font-mono text-[10px] uppercase tracking-wide text-ink-subtle">
-          ALL
-        </span>
-      ) : (
-        <span className="font-mono text-[10px] tabular-nums text-ink-muted">
-          {formatTime(event.startsAt, timeFormat)}
-        </span>
-      )}
+      {timeChip}
       <span
         className={
           "truncate text-ink " + (past ? "line-through decoration-1" : "")
@@ -312,4 +413,41 @@ function EventPill({
       </span>
     </li>
   );
+}
+
+function buildTooltip(
+  event: EventResponse,
+  slice: EventSlice,
+  kind: "all-day" | "timed",
+  timeFormat?: "12h" | "24h",
+): string {
+  const parts: string[] = [event.title];
+  if (kind === "all-day") {
+    if (slice.isMultiDay) {
+      const startDate = new Date(event.startsAt).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+      const endDate = new Date(event.endsAt).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+      parts.push(`${startDate} → ${endDate}`);
+    } else {
+      parts.push("All day");
+    }
+  } else if (timeFormat) {
+    if (slice.isMultiDay && slice.isStart) {
+      parts.push(`From ${formatTime(event.startsAt, timeFormat)}`);
+    } else if (slice.isMultiDay && slice.isEnd) {
+      parts.push(`Until ${formatTime(event.endsAt, timeFormat)}`);
+    } else {
+      parts.push(
+        `${formatTime(event.startsAt, timeFormat)}–${formatTime(event.endsAt, timeFormat)}`,
+      );
+    }
+  }
+  if (event.location) parts.push(event.location);
+  parts.push("double-click to edit");
+  return parts.join(" · ");
 }

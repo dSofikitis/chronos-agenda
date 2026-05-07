@@ -231,11 +231,20 @@ Polyglot monorepo. Each component builds and tests independently.
 | Component | Toolchain | Build | Test |
 |---|---|---|---|
 | `services/api` | Java 21, Maven Wrapper | `./mvnw package` | `./mvnw test` |
-| `frontend` | Node ≥ 20, Next.js 15 | `npm run build` | `npm test` |
+| `frontend` | Node ≥ 20, Next.js 16 | `npm run build` | `npm test` (vitest), `npm run test:e2e` (Playwright) |
+
+End-to-end: the [`e2e`](frontend/e2e) suite drives a real browser
+through dev-login → event/task CRUD → modal flows → theme + accent
+persistence → assistant bubble. Locally, `npm run test:e2e` starts
+the Next.js dev server itself; the API + Postgres need to be up
+beforehand. CI brings everything up in
+[`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) with a
+Postgres service container, a built API jar, and a production
+`next start` server before running Playwright.
 
 `make help` lists every target. CI (`.github/workflows/ci.yml`) runs
 the same lint + test matrix across Java and TS on every push to
-`main` and every PR.
+`main` and every PR; `e2e.yml` runs the Playwright suite.
 
 ## License
 

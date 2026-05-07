@@ -1,6 +1,13 @@
 spring:
   application:
     name: chronos-api
+  config:
+    # Source AGENT_MODE / AGENT_KEY (and friends) from a top-level .env at
+    # project root if it exists. `optional:` keeps startup quiet when the
+    # file is absent; production deploys set env vars directly.
+    import:
+      - "optional:file:./.env[.properties]"
+      - "optional:file:../../.env[.properties]"
   datasource:
     url: ${CHRONOS_DB_URL:jdbc:postgresql://localhost:5432/chronos}
     username: ${CHRONOS_DB_USER:chronos}
@@ -16,18 +23,6 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID:}
-            client-secret: ${GOOGLE_CLIENT_SECRET:}
-            scope:
-              - openid
-              - email
-              - profile
-
 server:
   port: ${SERVER_PORT:8080}
   forward-headers-strategy: framework
@@ -58,15 +53,24 @@ chronos:
   oauth:
     success-redirect: ${CHRONOS_OAUTH_SUCCESS_REDIRECT:http://localhost:3000/agenda}
     failure-redirect: ${CHRONOS_OAUTH_FAILURE_REDIRECT:http://localhost:3000/login?error=oauth}
-    # When unset, the OAuth flow short-circuits to a deterministic
-    # local-dev user so frontend work doesn't need a Google app.
-    enabled: ${GOOGLE_CLIENT_ID:false}
+    # Toggle separately from GOOGLE_CLIENT_ID so the autoconfig validator
+    # doesn't run on an empty-string registration during local-dev startup.
+    # Set to true alongside GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET to
+    # activate the Google OAuth2 chain.
+    enabled: ${CHRONOS_OAUTH_ENABLED:false}
   llm:
+    # Unified config: AGENT_MODE selects the backend (claude | gemini),
+    # AGENT_KEY is the credential. Empty / unrecognized → Ollama fallback.
+    agent:
+      mode: ${AGENT_MODE:}
+      key: ${AGENT_KEY:}
     anthropic:
-      api-key: ${ANTHROPIC_API_KEY:}
       model: ${CHRONOS_CLAUDE_MODEL:claude-opus-4-7}
       base-url: https://api.anthropic.com
       max-tokens: 1024
+    gemini:
+      model: ${CHRONOS_GEMINI_MODEL:gemini-2.5-flash}
+      base-url: https://generativelanguage.googleapis.com
     ollama:
       base-url: ${CHRONOS_OLLAMA_URL:http://localhost:11434}
       model: ${CHRONOS_OLLAMA_MODEL:qwen2.5:3b}

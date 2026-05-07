@@ -35,12 +35,13 @@ public class AnthropicClient implements LlmClient {
     private final HttpClient http;
 
     public AnthropicClient(
-            @Value("${chronos.llm.anthropic.api-key:}") String apiKey,
+            @Value("${chronos.llm.agent.mode:}") String mode,
+            @Value("${chronos.llm.agent.key:}") String key,
             @Value("${chronos.llm.anthropic.base-url:https://api.anthropic.com}") String baseUrl,
             @Value("${chronos.llm.anthropic.model:claude-opus-4-7}") String model,
             @Value("${chronos.llm.anthropic.max-tokens:1024}") int maxTokens,
             ObjectMapper json) {
-        this.apiKey = apiKey;
+        this.apiKey = "claude".equalsIgnoreCase(mode) && key != null && !key.isBlank() ? key : "";
         this.baseUrl = baseUrl;
         this.model = model;
         this.maxTokens = maxTokens;
@@ -51,7 +52,7 @@ public class AnthropicClient implements LlmClient {
     }
 
     public boolean configured() {
-        return apiKey != null && !apiKey.isBlank();
+        return !apiKey.isBlank();
     }
 
     @Override

@@ -24,7 +24,7 @@ UI uses, so the assistant cannot do anything the user couldn't do.
 | Capability | Where it shows up |
 |---|---|
 | **Conversational planner** | Claude API tool-use loop in `services/api/src/main/java/com/dsofikitis/chronos/ai/`. Tools: `list_events`, `create_event`, `update_event`, `delete_event`, `list_tasks`, `create_task`. Server-side; the browser never sees an Anthropic API key. |
-| **Local-LLM fallback** | If `ANTHROPIC_API_KEY` is unset, the assistant falls back to a local Ollama chat model (configurable via `CHRONOS_OLLAMA_URL`). Demo runs without external credentials. |
+| **Pluggable LLM** | One unified `AGENT_MODE` / `AGENT_KEY` switch picks Claude or Gemini at runtime. If neither is set, the assistant falls back to a local Ollama chat model (configurable via `CHRONOS_OLLAMA_URL`). Demo runs without external credentials. |
 | **OAuth2 Google login** | Spring Security 6 + `oauth2-client` + custom `JwtService`. The session token is a signed JWT in an HttpOnly cookie; the frontend re-issues it through Next.js server actions so the browser never holds it. |
 | **Per-user data isolation** | JPA `@PreAuthorize` + `@Filter`-style row guards on every controller. Cross-user reads are 404, not 403, on purpose (no oracle). |
 | **Calendar + tasks** | Events (start/end/all-day/recurrence) and Tasks (due-by, priority, status). Two domains, one assistant. |
@@ -96,18 +96,22 @@ on bare metal — Postgres in Docker, Java + Node natively — see
 ## Configuration
 
 The API reads everything from environment variables (see
-[`services/api/src/main/resources/application.yml`](services/api/src/main/resources/application.yml)):
+[`services/api/src/main/resources/application.yml`](services/api/src/main/resources/application.yml)).
+A top-level `.env` at the repo root is auto-loaded on startup —
+copy [`.env.example`](.env.example) to `.env` and fill in.
 
 | Env var | Default | What |
 |---|---|---|
+| `AGENT_MODE` | unset | `claude` or `gemini`. Empty / unrecognized → Ollama fallback. |
+| `AGENT_KEY` | unset | API key for whichever provider `AGENT_MODE` selects. |
+| `CHRONOS_CLAUDE_MODEL` | `claude-opus-4-7` | Anthropic model id |
+| `CHRONOS_GEMINI_MODEL` | `gemini-2.5-flash` | Google Gen-AI model id |
+| `CHRONOS_OLLAMA_URL` | `http://localhost:11434` | Local-LLM endpoint |
+| `CHRONOS_OLLAMA_MODEL` | `qwen2.5:3b` | Local-LLM model |
 | `CHRONOS_DB_URL` | `jdbc:postgresql://localhost:5432/chronos` | JDBC URL |
 | `CHRONOS_DB_USER` / `CHRONOS_DB_PASSWORD` | `chronos` / `chronos` | DB credentials |
 | `CHRONOS_JWT_SECRET` | random per-process | HS256 secret. Set explicitly in prod. |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unset | Google OAuth2 app credentials |
-| `ANTHROPIC_API_KEY` | unset | If set, the assistant uses Claude. |
-| `CHRONOS_CLAUDE_MODEL` | `claude-opus-4-7` | Model id to call |
-| `CHRONOS_OLLAMA_URL` | `http://localhost:11434` | Fallback LLM endpoint |
-| `CHRONOS_OLLAMA_MODEL` | `qwen2.5:3b` | Fallback model name |
+| `CHRONOS_OAUTH_ENABLED` | `false` | Set to `true` together with `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` to activate Google OAuth2. |
 
 ## Development
 

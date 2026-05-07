@@ -2,6 +2,7 @@ package com.dsofikitis.chronos.ai;
 
 import com.dsofikitis.chronos.ai.llm.AnthropicClient;
 import com.dsofikitis.chronos.ai.llm.ChatTurn;
+import com.dsofikitis.chronos.ai.llm.GeminiClient;
 import com.dsofikitis.chronos.ai.llm.LlmClient;
 import com.dsofikitis.chronos.ai.llm.OllamaClient;
 import com.dsofikitis.chronos.ai.tools.ToolRegistry;
@@ -25,6 +26,7 @@ public class AssistantService {
     private final ChatMessageRepository history;
     private final ToolRegistry tools;
     private final AnthropicClient anthropic;
+    private final GeminiClient gemini;
     private final OllamaClient ollama;
     private final ObjectMapper json;
     private final int historyWindow;
@@ -33,12 +35,14 @@ public class AssistantService {
             ChatMessageRepository history,
             ToolRegistry tools,
             AnthropicClient anthropic,
+            GeminiClient gemini,
             OllamaClient ollama,
             ObjectMapper json,
             @Value("${chronos.llm.history-window:12}") int historyWindow) {
         this.history = history;
         this.tools = tools;
         this.anthropic = anthropic;
+        this.gemini = gemini;
         this.ollama = ollama;
         this.json = json;
         this.historyWindow = historyWindow;
@@ -48,7 +52,10 @@ public class AssistantService {
     @Transactional
     public AssistantReply chat(UUID userId, String userMessage) {
         var client = pickClient();
-        var toolDefs = clientUsesAnthropic(client) ? tools.anthropicTools() : tools.openAiTools();
+        // Anthropic is the only backend whose tool wire-format differs from
+        // OpenAI's. Gemini reuses the OpenAI shape and unwraps it inside the
+        // GeminiClient.
+        var toolDefs = client == anthropic ? tools.anthropicTools() : tools.openAiTools();
 
         // Persist the user turn first so failures still leave the question on record.
         save(userId, "user", userMessage, null, null);
@@ -83,11 +90,9 @@ public class AssistantService {
     }
 
     private LlmClient pickClient() {
-        return anthropic.configured() ? anthropic : ollama;
-    }
-
-    private static boolean clientUsesAnthropic(LlmClient c) {
-        return "anthropic".equals(c.backend());
+        if (anthropic.configured()) return anthropic;
+        if (gemini.configured()) return gemini;
+        return ollama;
     }
 
     private List<ChatTurn> loadRecentHistory(UUID userId) {

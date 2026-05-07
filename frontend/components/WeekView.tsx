@@ -283,7 +283,7 @@ function EventPill({
       role="button"
       tabIndex={0}
       className={
-        "group flex cursor-pointer select-none items-center gap-1.5 rounded-md bg-surface px-1.5 py-1 text-xs ring-1 ring-divider/60 transition hover:ring-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand " +
+        "group flex cursor-pointer select-none items-center gap-1.5 rounded-md bg-surface px-1.5 py-1 text-xs ring-1 ring-divider/60 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand " +
         (past ? "opacity-45 hover:opacity-80" : "")
       }
     >

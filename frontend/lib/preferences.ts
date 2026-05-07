@@ -17,6 +17,7 @@ export interface Preferences {
   timeFormat: TimeFormat;
   weekStart: WeekStart;
   hideWeekends: boolean;
+  hidePastEventsToday: boolean;
   defaultEventDuration: number; // minutes
   assistantHotkey: boolean; // Cmd/Ctrl-K shortcut on/off
 }
@@ -28,6 +29,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   timeFormat: "24h",
   weekStart: "monday",
   hideWeekends: false,
+  hidePastEventsToday: false,
   defaultEventDuration: 60,
   assistantHotkey: true,
 };

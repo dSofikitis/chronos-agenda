@@ -43,6 +43,16 @@ export function CalendarSettings() {
         </Row>
 
         <Row
+          label="Hide ended events for today"
+          hint="Past days stay visible (dimmed); only today's already-finished events get hidden."
+        >
+          <Switch
+            checked={prefs.hidePastEventsToday}
+            onChange={(v) => set("hidePastEventsToday", v)}
+          />
+        </Row>
+
+        <Row
           label="Default event duration"
           hint="Pre-fills the duration on the agenda's quick-add form."
         >

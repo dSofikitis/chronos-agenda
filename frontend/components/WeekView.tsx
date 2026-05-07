@@ -26,6 +26,10 @@ export function WeekView({
     days = days.filter((d) => !isWeekend(d));
   }
   const today = new Date();
+  const nowMs = today.getTime();
+
+  const isPastEvent = (event: EventResponse) =>
+    new Date(event.endsAt).getTime() < nowMs;
 
   const byDay: Record<string, EventResponse[]> = {};
   for (const event of events) {
@@ -44,6 +48,14 @@ export function WeekView({
         const key = day.toDateString();
         const list = byDay[key] ?? [];
         const isToday = isSameDay(day, today);
+
+        // On today, optionally drop events that have already ended. Past days
+        // keep all of theirs (just dimmed), per the setting's intent.
+        const visibleList =
+          isToday && prefs.hidePastEventsToday
+            ? list.filter((e) => !isPastEvent(e))
+            : list;
+
         return (
           <div
             key={key}
@@ -70,23 +82,36 @@ export function WeekView({
               )}
             </div>
 
-            {list.length === 0 ? (
-              <p className="mt-2 text-xs text-ink-subtle">No events</p>
+            {visibleList.length === 0 ? (
+              <p className="mt-2 text-xs text-ink-subtle">
+                {list.length > 0 && isToday && prefs.hidePastEventsToday
+                  ? "Nothing left today"
+                  : "No events"}
+              </p>
             ) : (
               <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-                {list.map((event) => (
+                {visibleList.map((event) => (
                   <EventPill
                     key={event.id}
                     event={event}
                     timeFormat={prefs.timeFormat}
+                    past={isPastEvent(event)}
                   />
                 ))}
               </ul>
             )}
 
-            {list.length > 0 && (
+            {visibleList.length > 0 && (
               <p className="mt-1.5 shrink-0 text-[10px] text-ink-subtle">
-                {list.length} {list.length === 1 ? "event" : "events"}
+                {visibleList.length}{" "}
+                {visibleList.length === 1 ? "event" : "events"}
+                {isToday &&
+                  prefs.hidePastEventsToday &&
+                  list.length > visibleList.length && (
+                    <span className="ml-1">
+                      · {list.length - visibleList.length} hidden
+                    </span>
+                  )}
               </p>
             )}
           </div>
@@ -99,9 +124,11 @@ export function WeekView({
 function EventPill({
   event,
   timeFormat,
+  past,
 }: {
   event: EventResponse;
   timeFormat: "12h" | "24h";
+  past: boolean;
 }) {
   const tooltip = [
     event.title,
@@ -109,6 +136,7 @@ function EventPill({
       ? "All day"
       : `${formatTime(event.startsAt, timeFormat)}–${formatTime(event.endsAt, timeFormat)}`,
     event.location || undefined,
+    past ? "(ended)" : undefined,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -116,11 +144,17 @@ function EventPill({
   return (
     <li
       title={tooltip}
-      className="group flex items-center gap-1.5 rounded-md bg-surface px-1.5 py-1 text-xs ring-1 ring-divider/60 transition hover:ring-brand/40"
+      aria-label={tooltip}
+      className={
+        "group flex items-center gap-1.5 rounded-md bg-surface px-1.5 py-1 text-xs ring-1 ring-divider/60 transition hover:ring-brand/40 " +
+        (past ? "opacity-45 hover:opacity-80" : "")
+      }
     >
       <span
         aria-hidden
-        className="h-3 w-0.5 shrink-0 rounded-full bg-brand"
+        className={
+          "h-3 w-0.5 shrink-0 rounded-full " + (past ? "bg-ink-subtle" : "bg-brand")
+        }
       />
       {event.allDay ? (
         <span className="font-mono text-[10px] uppercase tracking-wide text-ink-subtle">
@@ -131,7 +165,13 @@ function EventPill({
           {formatTime(event.startsAt, timeFormat)}
         </span>
       )}
-      <span className="truncate text-ink">{event.title}</span>
+      <span
+        className={
+          "truncate text-ink " + (past ? "line-through decoration-1" : "")
+        }
+      >
+        {event.title}
+      </span>
     </li>
   );
 }

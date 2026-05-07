@@ -35,7 +35,17 @@ export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     throw new ApiError(res.status, await safeText(res));
   }
-  return (await res.json()) as T;
+  // Empty body (204, or 200 with no content like DELETE endpoints) → return
+  // undefined cast to T. Calling res.json() on an empty stream throws
+  // "Unexpected end of JSON input" — exactly what tasks delete was hitting.
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  const text = await res.text();
+  if (!text) {
+    return undefined as T;
+  }
+  return JSON.parse(text) as T;
 }
 
 export class ApiError extends Error {

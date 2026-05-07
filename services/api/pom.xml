@@ -40,7 +40,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-oauth2-client</artifactId>
+			<artifactId>spring-boot-starter-security-oauth2-client</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -52,7 +52,18 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<!-- Spring Boot 4 ships Jackson 3 (group `tools.jackson`) by default
+		     and only auto-registers the Jackson 3 ObjectMapper bean. The
+		     project's tool/LLM-client code still imports Jackson 2 types
+		     (`com.fasterxml.jackson.databind.ObjectMapper`); this module is
+		     Boot 4's official backward-compat shim that keeps the Jackson 2
+		     ObjectMapper bean autoconfigured. Remove once code migrates to
+		     Jackson 3 (`tools.jackson.*`). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-jackson2</artifactId>
 		</dependency>
 		<dependency>
 			<!-- Spring Boot 4 split autoconfig into per-feature modules.

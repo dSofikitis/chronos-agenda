@@ -22,8 +22,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Manual build mode — CodeQL's autobuild bails on a Spring Boot
+          # 3.5 project rooted under services/api with the Maven Wrapper.
+          # We invoke ./mvnw ourselves between init and analyze.
           - language: java-kotlin
-            build-mode: autobuild
+            build-mode: manual
           - language: javascript-typescript
             build-mode: none
     steps:
@@ -33,11 +36,16 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+          cache: maven
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+      - name: Manual build (Maven)
+        if: matrix.language == 'java-kotlin'
+        working-directory: services/api
+        run: ./mvnw -B -q -DskipTests package
       - name: Analyze
         uses: github/codeql-action/analyze@v4
         with:

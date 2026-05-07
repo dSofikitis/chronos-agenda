@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: chronos
+      POSTGRES_PASSWORD: chronos
+      POSTGRES_DB: chronos
+    volumes:
+      - chronos-pg:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronos -d chronos"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ../../services/api
+      dockerfile: Dockerfile
+    environment:
+      CHRONOS_DB_URL: jdbc:postgresql://postgres:5432/chronos
+      CHRONOS_DB_USER: chronos
+      CHRONOS_DB_PASSWORD: chronos
+      CHRONOS_JWT_SECRET: ${CHRONOS_JWT_SECRET:-change-me-in-prod}
+      CHRONOS_CORS_ORIGIN: http://localhost:3000
+      CHRONOS_OAUTH_SUCCESS_REDIRECT: http://localhost:3000/agenda
+      CHRONOS_OAUTH_FAILURE_REDIRECT: http://localhost:3000/login?error=oauth
+      CHRONOS_ICS_PUBLIC_BASE: http://localhost:8080
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CHRONOS_OLLAMA_URL: ${CHRONOS_OLLAMA_URL:-http://host.docker.internal:11434}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    environment:
+      CHRONOS_API_URL: http://api:8080
+      NEXT_PUBLIC_CHRONOS_API_URL: http://localhost:8080
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  chronos-pg:

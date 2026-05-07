@@ -34,6 +34,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   assistantHotkey: true,
 };
 
+// NOTE: keep RGB triplets in sync with the inline `accents` table in
+// components/PreferencesProvider.tsx → NO_FLASH_SCRIPT. The no-flash
+// script runs before React hydrates and can't import this file.
 export const ACCENT_PRESETS: Record<AccentName, { label: string; hex: string; light: string; dark: string }> = {
   red: { label: "Red", hex: "#ef4444", light: "239 68 68", dark: "248 113 113" },
   blue: { label: "Blue", hex: "#3b82f6", light: "59 130 246", dark: "96 165 250" },

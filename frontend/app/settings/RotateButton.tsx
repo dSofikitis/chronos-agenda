@@ -23,11 +23,11 @@ export function RotateButton() {
           });
         }}
         disabled={isPending}
-        className="rounded-md border border-rose-700 px-3 py-1.5 text-sm text-rose-200 hover:bg-rose-900/40 disabled:opacity-50"
+        className="rounded-xl border border-danger/40 bg-danger/10 px-3 py-1.5 text-sm font-medium text-danger transition hover:bg-danger/20 disabled:opacity-50"
       >
         {isPending ? "Rotating…" : "Rotate token"}
       </button>
-      {error && <span className="text-xs text-rose-400">{error}</span>}
+      {error && <span className="text-xs text-danger">{error}</span>}
     </div>
   );
 }

@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { NewTaskForm } from "./NewTaskForm";
 import { TaskRow } from "./TaskRow";
 import { apiJson } from "@/lib/apiClient";
@@ -15,21 +13,19 @@ export default async function TasksPage() {
   const done = tasks.filter((t) => t.status === "done");
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Tasks</h1>
-        <nav className="flex gap-3 text-sm text-zinc-400">
-          <Link href="/agenda" className="hover:text-zinc-100">Agenda</Link>
-          <Link href="/tasks" className="hover:text-zinc-100">Tasks</Link>
-          <Link href="/settings" className="hover:text-zinc-100">Settings</Link>
-        </nav>
+    <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
+      <header className="space-y-1">
+        <p className="text-xs uppercase tracking-[0.18em] text-ink-subtle">
+          Things to do
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">Tasks</h1>
       </header>
 
       <NewTaskForm />
 
       <Section title={`Open (${open.length})`} tasks={open} />
       <Section title={`Done (${done.length})`} tasks={done} />
-    </main>
+    </div>
   );
 }
 
@@ -41,13 +37,13 @@ function Section({
   tasks: TaskResponse[];
 }) {
   return (
-    <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+    <section className="rounded-2xl border border-divider bg-surface-card p-5">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
         {title}
       </h2>
-      <ul className="mt-3 divide-y divide-zinc-800/60">
+      <ul className="mt-3 divide-y divide-divider/60">
         {tasks.length === 0 && (
-          <li className="py-2 text-sm text-zinc-500">Nothing here.</li>
+          <li className="density-pad text-sm text-ink-subtle">Nothing here.</li>
         )}
         {tasks.map((task) => (
           <TaskRow key={task.id} task={task} />

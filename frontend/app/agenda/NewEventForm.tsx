@@ -3,11 +3,13 @@
 import { useState, useTransition } from "react";
 
 import { createEventAction } from "./actions";
+import { usePreferences } from "@/components/PreferencesProvider";
 
 export function NewEventForm() {
+  const { prefs } = usePreferences();
   const [title, setTitle] = useState("");
   const [startsAt, setStartsAt] = useState(suggestedStart());
-  const [duration, setDuration] = useState(60);
+  const [duration, setDuration] = useState(prefs.defaultEventDuration);
   const [location, setLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -31,7 +33,7 @@ export function NewEventForm() {
         setTitle("");
         setLocation("");
         setStartsAt(suggestedStart());
-        setDuration(60);
+        setDuration(prefs.defaultEventDuration);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       }
@@ -41,18 +43,23 @@ export function NewEventForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-5"
+      className="space-y-3 rounded-2xl border border-divider bg-surface-card p-5"
     >
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-        New event
-      </h2>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          Quick add
+        </h2>
+        <p className="text-[11px] text-ink-subtle">
+          For natural language, ask the assistant.
+        </p>
+      </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[2fr_1fr_auto_1fr_auto]">
         <input
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          className="rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none ring-1 ring-zinc-800 focus:ring-zinc-600"
+          placeholder="Event title"
+          className="rounded-xl bg-surface-input px-3 py-2 text-sm text-ink placeholder:text-ink-subtle outline-none ring-1 ring-divider focus:ring-brand"
           disabled={isPending}
         />
         <input
@@ -60,13 +67,13 @@ export function NewEventForm() {
           type="datetime-local"
           value={startsAt}
           onChange={(e) => setStartsAt(e.target.value)}
-          className="rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none ring-1 ring-zinc-800 focus:ring-zinc-600"
+          className="rounded-xl bg-surface-input px-3 py-2 text-sm text-ink outline-none ring-1 ring-divider focus:ring-brand"
           disabled={isPending}
         />
         <select
           value={duration}
           onChange={(e) => setDuration(Number(e.target.value))}
-          className="rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none ring-1 ring-zinc-800 focus:ring-zinc-600"
+          className="rounded-xl bg-surface-input px-3 py-2 text-sm text-ink outline-none ring-1 ring-divider focus:ring-brand"
           disabled={isPending}
         >
           <option value={15}>15m</option>
@@ -80,28 +87,26 @@ export function NewEventForm() {
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Location (optional)"
-          className="rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none ring-1 ring-zinc-800 focus:ring-zinc-600"
+          className="rounded-xl bg-surface-input px-3 py-2 text-sm text-ink placeholder:text-ink-subtle outline-none ring-1 ring-divider focus:ring-brand"
           disabled={isPending}
         />
         <button
           type="submit"
           disabled={isPending || !title.trim()}
-          className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white disabled:opacity-50"
+          className="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-brand-fg transition hover:brightness-110 disabled:opacity-50"
         >
           Add
         </button>
       </div>
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </form>
   );
 }
 
-/** Default the picker to the next round hour. */
 function suggestedStart(): string {
   const d = new Date();
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + 1);
-  // datetime-local wants 'YYYY-MM-DDTHH:mm' in the user's local zone.
   const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
   return (
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +

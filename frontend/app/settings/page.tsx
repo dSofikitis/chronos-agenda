@@ -1,5 +1,5 @@
-import Link from "next/link";
-
+import { AppearanceSettings } from "./AppearanceSettings";
+import { CalendarSettings } from "./CalendarSettings";
 import { RotateButton } from "./RotateButton";
 import { apiJson } from "@/lib/apiClient";
 import type { CurrentUser, IcsUrl } from "@/lib/types";
@@ -13,54 +13,55 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Settings</h1>
-        <nav className="flex gap-3 text-sm text-zinc-400">
-          <Link href="/agenda" className="hover:text-zinc-100">Agenda</Link>
-          <Link href="/tasks" className="hover:text-zinc-100">Tasks</Link>
-          <Link href="/settings" className="hover:text-zinc-100">Settings</Link>
-        </nav>
+    <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
+      <header className="space-y-1">
+        <p className="text-xs uppercase tracking-[0.18em] text-ink-subtle">
+          Preferences live in your browser
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
       </header>
 
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+      <section className="rounded-2xl border border-divider bg-surface-card p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
           Account
         </h2>
-        <dl className="mt-3 space-y-2 text-sm">
+        <dl className="mt-4 space-y-2 text-sm">
           <Row label="Display name" value={me.displayName} />
           <Row label="Email" value={me.email} />
-          <Row label="Timezone" value={me.timezone} />
+          <Row label="Server timezone" value={me.timezone} />
         </dl>
       </section>
 
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-          Calendar feed (.ics)
+      <AppearanceSettings />
+      <CalendarSettings />
+
+      <section className="rounded-2xl border border-divider bg-surface-card p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          Calendar feed
         </h2>
-        <p className="mt-2 text-xs text-zinc-500">
+        <p className="mt-2 text-xs text-ink-subtle">
           Subscribe with this URL from Apple Calendar / Google Calendar /
-          Thunderbird to follow your Chronos schedule. Read-only. Rotating
-          invalidates any subscribed clients.
+          Thunderbird. Read-only. Rotating invalidates any subscribed clients.
         </p>
         <input
           readOnly
           value={ics.url}
-          className="mt-3 w-full rounded-md bg-zinc-950 px-3 py-2 text-xs font-mono text-zinc-300 ring-1 ring-zinc-800"
+          onClick={(e) => e.currentTarget.select()}
+          className="mt-3 w-full rounded-xl bg-surface-input px-3 py-2 font-mono text-xs text-ink outline-none ring-1 ring-divider"
         />
         <div className="mt-3">
           <RotateButton />
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-zinc-500">{label}</dt>
-      <dd className="text-zinc-200">{value}</dd>
+      <dt className="text-ink-muted">{label}</dt>
+      <dd className="text-ink">{value}</dd>
     </div>
   );
 }

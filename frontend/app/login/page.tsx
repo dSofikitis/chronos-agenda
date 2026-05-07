@@ -6,12 +6,16 @@ export default function LoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-8 shadow-xl">
-        <h1 className="text-2xl font-semibold">Chronos Agenda</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Personal planner with a Claude-powered assistant. Sign in to start
-          organizing your week.
+    <main className="relative mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-64 max-w-2xl rounded-full bg-brand/15 blur-3xl"
+      />
+      <div className="rounded-2xl border border-divider bg-surface-elevated p-8 shadow-soft">
+        <h1 className="text-2xl font-semibold tracking-tight">Chronos</h1>
+        <p className="mt-2 text-sm text-ink-muted">
+          A modern personal planner. Talk to your week, share it as a feed, and
+          keep everything on one screen.
         </p>
 
         <ErrorMessage searchParams={searchParams} />
@@ -20,10 +24,10 @@ export default function LoginPage({
           <LoginButtons />
         </div>
 
-        <p className="mt-6 text-xs text-zinc-500">
-          By signing in you agree that calendar data lives in this server&apos;s
-          database. There is no Google Calendar sync — Chronos is the source of
-          truth.
+        <p className="mt-6 text-xs text-ink-subtle">
+          Calendar data lives in your own database — there is no Google
+          Calendar sync. You can export it as an .ics feed any client can
+          subscribe to.
         </p>
       </div>
     </main>
@@ -38,7 +42,7 @@ async function ErrorMessage({
   const params = await searchParams;
   if (!params.error) return null;
   return (
-    <p className="mt-4 rounded border border-rose-700 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+    <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
       Sign-in failed ({params.error}). Try again?
     </p>
   );

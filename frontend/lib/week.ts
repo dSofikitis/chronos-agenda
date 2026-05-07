@@ -18,16 +18,22 @@ export function endOfWeek(d: Date, weekStartsOn: 0 | 1 = 1): Date {
   return addDays(startOfWeek(d, weekStartsOn), 7);
 }
 
-export function formatWeekday(d: Date, locale = "en-US"): string {
+export function formatWeekday(d: Date, locale?: string): string {
   return d.toLocaleDateString(locale, { weekday: "short", day: "numeric" });
 }
 
-/** Format an ISO datetime as HH:mm in the user's local zone. */
-export function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+export function isWeekend(d: Date): boolean {
+  const day = d.getDay();
+  return day === 0 || day === 6;
 }
 
-function pad(n: number): string {
-  return n < 10 ? `0${n}` : `${n}`;
+export function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
+
+/** Re-exported for tests; canonical implementation lives in lib/format.ts. */
+export { formatTime } from "./format";

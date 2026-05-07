@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { NewEventForm } from "./NewEventForm";
@@ -28,6 +29,7 @@ export default async function AgendaPage({
   const from = startOfWeek(anchor);
   const to = endOfWeek(anchor);
   const isCurrent = isSameDay(from, startOfWeek(today));
+  const firstName = me.displayName.split(" ")[0];
 
   const [events, tasks] = await Promise.all([
     apiJson<EventResponse[]>(
@@ -40,12 +42,15 @@ export default async function AgendaPage({
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <header className="space-y-3">
         <div className="flex items-end justify-between gap-3">
+          {/* Current week: greeting takes the spotlight, date range is the
+              quiet overline. Other weeks: greeting demotes to overline so
+              the heading shows which week you're browsing. */}
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.18em] text-ink-subtle">
-              Hi, {me.displayName.split(" ")[0]}.
+              {isCurrent ? weekRangeLabel(from, to) : `Hi, ${firstName}`}
             </p>
             <h1 className="text-3xl font-semibold tracking-tight">
-              {weekHeading(from, to)}
+              {isCurrent ? `Hi, ${firstName}` : weekHeading(from, to)}
             </h1>
           </div>
           <WeekNav weekStart={from} isCurrentWeek={isCurrent} />
@@ -65,10 +70,21 @@ export default async function AgendaPage({
 
       <WeekView from={from.toISOString()} events={events} />
 
-      <section className="rounded-2xl border border-divider bg-surface-card p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
-          Open tasks
-        </h2>
+      <Link
+        href="/tasks"
+        className="group block rounded-2xl border border-divider bg-surface-card p-5 transition hover:border-brand/50 hover:bg-brand-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
+            Open tasks
+          </h2>
+          <span
+            aria-hidden
+            className="text-xs text-ink-subtle transition group-hover:translate-x-0.5 group-hover:text-brand"
+          >
+            View all →
+          </span>
+        </div>
         {tasks.length === 0 ? (
           <p className="mt-3 text-sm text-ink-subtle">
             Nothing open. Add a task from the assistant or the Tasks tab.
@@ -94,7 +110,7 @@ export default async function AgendaPage({
             ))}
           </ul>
         )}
-      </section>
+      </Link>
     </div>
   );
 }
@@ -117,6 +133,12 @@ function parseAnchor(raw: string | undefined): Date | null {
   if (!m) return null;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return Number.isNaN(d.valueOf()) ? null : d;
+}
+
+function weekRangeLabel(from: Date, to: Date): string {
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  const end = new Date(to.getTime() - 1);
+  return `${from.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
 }
 
 function weekHeading(from: Date, to: Date): string {

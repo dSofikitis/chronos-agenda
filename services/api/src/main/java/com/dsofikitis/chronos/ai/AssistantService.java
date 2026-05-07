@@ -4,7 +4,10 @@ import com.dsofikitis.chronos.ai.llm.AnthropicClient;
 import com.dsofikitis.chronos.ai.llm.ChatTurn;
 import com.dsofikitis.chronos.ai.llm.GeminiClient;
 import com.dsofikitis.chronos.ai.llm.LlmClient;
+import com.dsofikitis.chronos.ai.llm.LlmException;
 import com.dsofikitis.chronos.ai.llm.OllamaClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.dsofikitis.chronos.ai.tools.ToolRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AssistantService {
 
+    private static final Logger log = LoggerFactory.getLogger(AssistantService.class);
     private static final int MAX_TOOL_LOOPS = 6;
 
     private final ChatMessageRepository history;
@@ -63,30 +67,57 @@ public class AssistantService {
         var turns = loadRecentHistory(userId);
         turns.add(ChatTurn.user(userMessage));
 
-        for (int loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
-            var reply = client.complete(turns, toolDefs);
+        try {
+            for (int loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
+                var reply = client.complete(turns, toolDefs);
 
-            if (reply.hasToolCalls()) {
-                turns.add(reply);
-                save(userId, "assistant", "", null, null);
-                for (var call : reply.toolCalls()) {
-                    JsonNode result = tools.invoke(call.name(), call.input(), userId);
-                    String resultStr = jsonToString(result);
-                    turns.add(ChatTurn.toolResult(call.id(), call.name(), resultStr));
-                    save(userId, "tool", resultStr, call.name(), call.id());
+                if (reply.hasToolCalls()) {
+                    turns.add(reply);
+                    save(userId, "assistant", "", null, null);
+                    for (var call : reply.toolCalls()) {
+                        JsonNode result = tools.invoke(call.name(), call.input(), userId);
+                        String resultStr = jsonToString(result);
+                        turns.add(ChatTurn.toolResult(call.id(), call.name(), resultStr));
+                        save(userId, "tool", resultStr, call.name(), call.id());
+                    }
+                    continue;
                 }
-                continue;
-            }
 
-            // Final text turn — persist and return.
-            save(userId, "assistant", reply.content(), null, null);
-            return new AssistantReply(client.backend(), reply.content());
+                // Final text turn — persist and return.
+                save(userId, "assistant", reply.content(), null, null);
+                return new AssistantReply(client.backend(), reply.content());
+            }
+        } catch (LlmException e) {
+            log.warn("LLM call failed via {}: {}", client.backend(), e.getMessage());
+            var msg = friendlyLlmError(client);
+            save(userId, "assistant", msg, null, null);
+            return new AssistantReply("system", msg);
         }
 
         var stuck = "I made " + MAX_TOOL_LOOPS
                 + " tool calls without reaching a conclusion. Please rephrase the request.";
         save(userId, "assistant", stuck, null, null);
         return new AssistantReply(client.backend(), stuck);
+    }
+
+    /**
+     * Pick a message that helps the user fix the most likely cause without
+     * digging through API logs. The Ollama fallback failing is by far the
+     * common case in local dev — no key set, no Ollama running, channel
+     * dies on connect.
+     */
+    private String friendlyLlmError(LlmClient client) {
+        if (client == ollama) {
+            return "I'm not configured with an LLM backend yet. Set "
+                    + "AGENT_MODE=gemini (or claude) and AGENT_KEY=<your-key> in "
+                    + "the project's .env, then restart the API. Without that I "
+                    + "fall back to a local Ollama on http://localhost:11434, "
+                    + "which doesn't appear to be running.";
+        }
+        return "The "
+                + client.backend()
+                + " backend rejected the request. Double-check that AGENT_KEY is "
+                + "valid and the model id is one this provider supports.";
     }
 
     private LlmClient pickClient() {

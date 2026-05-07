@@ -45,7 +45,7 @@ export function WeekView({
     <>
       <div
         className={
-          "grid gap-3 grid-cols-1 " +
+          "grid gap-2.5 grid-cols-1 lg:gap-3 " +
           (prefs.hideWeekends ? "lg:grid-cols-5" : "lg:grid-cols-7")
         }
       >
@@ -60,41 +60,70 @@ export function WeekView({
             isToday && prefs.hidePastEventsToday
               ? list.filter((e) => !isPastEvent(e))
               : list;
+          const isEmpty = visibleList.length === 0;
+          const emptyMessage =
+            list.length > 0 && isToday && prefs.hidePastEventsToday
+              ? "Nothing left today"
+              : "No events";
 
+          // Mobile: each day is an Apple-Wallet–style stacked card. Empty
+          // days collapse to a single inline row, populated days expand to
+          // their natural height so the next card sits below the actual
+          // last event. No fixed height, no internal scroll — page-level
+          // scroll handles overflow.
+          // Desktop (lg+): retain the uniform 7-column grid with h-72 cells
+          // and a per-cell scroll for very long lists.
           return (
             <div
               key={key}
+              data-empty={isEmpty || undefined}
               className={
-                "flex h-72 flex-col rounded-2xl border bg-surface-card p-3 transition " +
+                "flex flex-col rounded-2xl border bg-surface-card p-3 shadow-soft transition lg:h-72 lg:shadow-none " +
                 (isToday
                   ? "border-brand/60 ring-1 ring-brand/30"
                   : "border-divider")
               }
             >
-              <div className="flex shrink-0 items-center justify-between">
-                <span
-                  className={
-                    "text-xs uppercase tracking-wide " +
-                    (isToday ? "text-brand" : "text-ink-muted")
-                  }
-                >
-                  {formatWeekday(day)}
-                </span>
-                {isToday && (
-                  <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
-                    Today
+              {/* Header: inline next to the empty-state pill on mobile,
+                  block on lg so the day name sits above the events list. */}
+              <div
+                className={
+                  "flex shrink-0 items-center gap-2 " +
+                  (isEmpty ? "justify-between lg:justify-between" : "justify-between")
+                }
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={
+                      "text-xs uppercase tracking-wide " +
+                      (isToday ? "text-brand" : "text-ink-muted")
+                    }
+                  >
+                    {formatWeekday(day)}
+                  </span>
+                  {isToday && (
+                    <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
+                      Today
+                    </span>
+                  )}
+                </div>
+                {/* Mobile-only inline empty pill — sits in the header row so
+                    the whole card is one line tall when empty. Hidden on
+                    lg where the message renders below the header instead. */}
+                {isEmpty && (
+                  <span className="text-xs text-ink-subtle lg:hidden">
+                    {emptyMessage}
                   </span>
                 )}
               </div>
 
-              {visibleList.length === 0 ? (
-                <p className="mt-2 text-xs text-ink-subtle">
-                  {list.length > 0 && isToday && prefs.hidePastEventsToday
-                    ? "Nothing left today"
-                    : "No events"}
+              {isEmpty ? (
+                // Desktop-only empty message; mobile shows it inline above.
+                <p className="mt-2 hidden text-xs text-ink-subtle lg:block">
+                  {emptyMessage}
                 </p>
               ) : (
-                <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+                <ul className="mt-2 space-y-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                   {visibleList.map((event) => (
                     <EventPill
                       key={event.id}
@@ -107,7 +136,7 @@ export function WeekView({
                 </ul>
               )}
 
-              {visibleList.length > 0 && (
+              {!isEmpty && (
                 <p className="mt-1.5 shrink-0 text-[10px] text-ink-subtle">
                   {visibleList.length}{" "}
                   {visibleList.length === 1 ? "event" : "events"}

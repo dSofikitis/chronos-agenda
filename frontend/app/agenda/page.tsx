@@ -42,12 +42,10 @@ export default async function AgendaPage({
         <div className="flex items-end justify-between gap-3">
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.18em] text-ink-subtle">
-              {weekRangeLabel(from, to)}
+              Hi, {me.displayName.split(" ")[0]}.
             </p>
             <h1 className="text-3xl font-semibold tracking-tight">
-              {isCurrent
-                ? `Hi, ${me.displayName.split(" ")[0]}.`
-                : weekHeading(from, to)}
+              {weekHeading(from, to)}
             </h1>
           </div>
           <WeekNav weekStart={from} isCurrentWeek={isCurrent} />
@@ -86,10 +84,10 @@ export default async function AgendaPage({
                 <span className="text-xs text-ink-muted">
                   {task.dueBy
                     ? new Date(task.dueBy).toLocaleDateString(undefined, {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })
                     : "—"}
                 </span>
               </li>
@@ -119,12 +117,6 @@ function parseAnchor(raw: string | undefined): Date | null {
   if (!m) return null;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return Number.isNaN(d.valueOf()) ? null : d;
-}
-
-function weekRangeLabel(from: Date, to: Date): string {
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const end = new Date(to.getTime() - 1);
-  return `${from.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
 }
 
 function weekHeading(from: Date, to: Date): string {

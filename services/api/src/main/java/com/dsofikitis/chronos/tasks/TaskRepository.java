@@ -1,0 +1,15 @@
+package com.dsofikitis.chronos.tasks;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface TaskRepository extends JpaRepository<Task, UUID> {
+
+    Optional<Task> findByIdAndUserId(UUID id, UUID userId);
+
+    List<Task> findByUserIdAndStatusOrderByDueByAscCreatedAtAsc(UUID userId, String status);
+
+    List<Task> findByUserIdOrderByDueByAscCreatedAtAsc(UUID userId);
+}

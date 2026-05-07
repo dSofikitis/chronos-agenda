@@ -1,5 +1,6 @@
 import { AppearanceSettings } from "./AppearanceSettings";
 import { CalendarSettings } from "./CalendarSettings";
+import { IcsUrlField } from "./IcsUrlField";
 import { RotateButton } from "./RotateButton";
 import { apiJson } from "@/lib/apiClient";
 import type { CurrentUser, IcsUrl } from "@/lib/types";
@@ -43,12 +44,9 @@ export default async function SettingsPage() {
           Subscribe with this URL from Apple Calendar / Google Calendar /
           Thunderbird. Read-only. Rotating invalidates any subscribed clients.
         </p>
-        <input
-          readOnly
-          value={ics.url}
-          onClick={(e) => e.currentTarget.select()}
-          className="mt-3 w-full rounded-xl bg-surface-input px-3 py-2 font-mono text-xs text-ink outline-none ring-1 ring-divider"
-        />
+        <div className="mt-3">
+          <IcsUrlField url={ics.url} />
+        </div>
         <div className="mt-3">
           <RotateButton />
         </div>

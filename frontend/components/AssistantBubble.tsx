@@ -173,7 +173,7 @@ export function AssistantBubble() {
           role="dialog"
           aria-label="Chronos assistant"
           ref={dialogRef}
-          className="fixed bottom-24 right-6 z-50 flex w-[min(420px,calc(100vw-2rem))] origin-bottom-right animate-bubble-pop flex-col overflow-hidden rounded-2xl border border-divider bg-surface-elevated text-ink shadow-bubble"
+          className="fixed bottom-24 right-6 z-50 flex w-[min(420px,calc(100vw-2rem))] origin-bottom-right animate-bubble-pop flex-col overflow-hidden rounded-2xl border border-divider bg-surface/65 text-ink shadow-bubble backdrop-blur-lg"
         >
           <header className="flex items-center justify-between gap-3 border-b border-divider px-4 py-3">
             <div className="flex items-center gap-2">

@@ -64,7 +64,7 @@ export function DayDetailDialog({
         role="dialog"
         aria-modal="true"
         aria-label={fullDate}
-        className="w-full max-w-md origin-center animate-bubble-pop overflow-hidden rounded-3xl border border-divider bg-surface-elevated text-ink shadow-bubble"
+        className="w-full max-w-md origin-center animate-bubble-pop overflow-hidden rounded-3xl border border-divider bg-surface/65 text-ink shadow-bubble backdrop-blur-lg"
       >
         <header className="relative border-b border-divider px-6 pb-4 pt-5">
           <div className="flex items-start justify-between gap-3">

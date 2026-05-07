@@ -99,7 +99,7 @@ export function EventEditDialog({ event, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={dialogId}
-        className="w-full max-w-lg origin-center animate-bubble-pop overflow-hidden rounded-2xl border border-divider bg-surface-elevated text-ink shadow-bubble"
+        className="w-full max-w-lg origin-center animate-bubble-pop overflow-hidden rounded-2xl border border-divider bg-surface/65 text-ink shadow-bubble backdrop-blur-lg"
       >
         <header className="flex items-center justify-between border-b border-divider px-5 py-3">
           <div>

@@ -90,9 +90,15 @@ export function usePreferences(): PreferencesContextValue {
 }
 
 /**
- * Inline script injected before hydration to set the theme class on
- * <html> from localStorage / system, eliminating the dark-mode flash.
- * Stringified directly into a <script> tag in app/layout.tsx.
+ * Inline script injected before hydration to set the theme class +
+ * accent CSS vars on <html> from localStorage, eliminating both the
+ * dark-mode flash and the "default red until React mounts" flash on
+ * a non-default accent. Stringified directly into a <script> tag in
+ * app/layout.tsx.
+ *
+ * The accent table here MUST match ACCENT_PRESETS in lib/preferences.ts.
+ * Pre-hydration JS can't import the TS table, so we duplicate the
+ * RGB triplets inline. Adding a new preset means updating both spots.
  */
 export const NO_FLASH_SCRIPT = `
 (function(){
@@ -104,6 +110,18 @@ export const NO_FLASH_SCRIPT = `
     if (dark) document.documentElement.classList.add('dark');
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.documentElement.dataset.density = (prefs && prefs.density) || 'comfortable';
+
+    var accents = {
+      red:     ['239 68 68',   '248 113 113'],
+      blue:    ['59 130 246',  '96 165 250'],
+      violet:  ['139 92 246',  '167 139 250'],
+      emerald: ['16 185 129',  '52 211 153'],
+      rose:    ['244 63 94',   '251 113 133'],
+      amber:   ['245 158 11',  '251 191 36']
+    };
+    var picked = accents[prefs && prefs.accent] || accents.red;
+    document.documentElement.style.setProperty('--c-brand-light', picked[0]);
+    document.documentElement.style.setProperty('--c-brand-dark',  picked[1]);
   } catch (e) { /* leave defaults */ }
 })();
 `;

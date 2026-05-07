@@ -1,0 +1,38 @@
+# Java / Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+*.class
+hs_err_pid*
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.turbo/
+coverage/
+.cache/
+
+# Local dev config
+.env
+.env.local
+.env.*.local
+application-local.yml
+application-local.properties
+
+# Test artifacts
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

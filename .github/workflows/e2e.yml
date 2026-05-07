@@ -53,24 +53,30 @@ jobs:
 
       - name: Build the API jar
         working-directory: services/api
-        run: ./mvnw -B -q -DskipTests package
+        run: ./mvnw -B -DskipTests package
 
       - name: Start the API
         working-directory: services/api
         run: |
-          nohup java -jar target/*.jar > ../../api.log 2>&1 &
+          set -eu
+          # Spring Boot's plugin produces both `*.jar` (executable) and
+          # `*.jar.original` (plain). The `.original` doesn't end in .jar so
+          # this glob is safe, but be explicit anyway.
+          JAR=$(ls target/chronos-*.jar | grep -v '\.original$' | head -1)
+          echo "Starting $JAR"
+          nohup java -jar "$JAR" > ../../api.log 2>&1 &
           echo $! > ../../api.pid
 
       - name: Wait for API health
         run: |
-          for i in $(seq 1 60); do
-            if curl -sSf http://localhost:8080/actuator/health | grep -q '"UP"'; then
-              echo "API up"
+          for i in $(seq 1 90); do
+            if curl -sSf http://localhost:8080/actuator/health 2>/dev/null | grep -q '"UP"'; then
+              echo "API up after ${i}s × 2 = $((i*2))s"
               exit 0
             fi
             sleep 2
           done
-          echo "API failed to start"
+          echo "::error::API failed to start within 180s"
           tail -200 api.log
           exit 1
 
@@ -101,14 +107,14 @@ jobs:
 
       - name: Wait for frontend
         run: |
-          for i in $(seq 1 30); do
-            if curl -sSf -o /dev/null http://localhost:3000/login; then
-              echo "frontend up"
+          for i in $(seq 1 45); do
+            if curl -sSf -o /dev/null http://localhost:3000/login 2>/dev/null; then
+              echo "frontend up after $((i*2))s"
               exit 0
             fi
             sleep 2
           done
-          echo "frontend failed to start"
+          echo "::error::Frontend failed to start within 90s"
           tail -200 frontend.log
           exit 1
 

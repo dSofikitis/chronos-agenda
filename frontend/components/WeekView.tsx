@@ -48,13 +48,13 @@ export function WeekView({
           <div
             key={key}
             className={
-              "flex min-h-32 flex-col rounded-2xl border bg-surface-card p-3 transition " +
+              "flex h-72 flex-col rounded-2xl border bg-surface-card p-3 transition " +
               (isToday
                 ? "border-brand/60 ring-1 ring-brand/30"
                 : "border-divider")
             }
           >
-            <div className="flex items-center justify-between">
+            <div className="flex shrink-0 items-center justify-between">
               <span
                 className={
                   "text-xs uppercase tracking-wide " +
@@ -69,28 +69,69 @@ export function WeekView({
                 </span>
               )}
             </div>
-            <ul className="mt-2 space-y-1.5 text-sm">
-              {list.length === 0 && (
-                <li className="text-xs text-ink-subtle">No events</li>
-              )}
-              {list.map((event) => (
-                <li
-                  key={event.id}
-                  className="rounded-xl border border-divider bg-surface px-2.5 py-1.5 transition hover:border-brand/40"
-                >
-                  <div className="font-medium text-ink">{event.title}</div>
-                  <div className="text-xs text-ink-muted">
-                    {event.allDay
-                      ? "All day"
-                      : `${formatTime(event.startsAt, prefs.timeFormat)}–${formatTime(event.endsAt, prefs.timeFormat)}`}
-                    {event.location && ` · ${event.location}`}
-                  </div>
-                </li>
-              ))}
-            </ul>
+
+            {list.length === 0 ? (
+              <p className="mt-2 text-xs text-ink-subtle">No events</p>
+            ) : (
+              <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+                {list.map((event) => (
+                  <EventPill
+                    key={event.id}
+                    event={event}
+                    timeFormat={prefs.timeFormat}
+                  />
+                ))}
+              </ul>
+            )}
+
+            {list.length > 0 && (
+              <p className="mt-1.5 shrink-0 text-[10px] text-ink-subtle">
+                {list.length} {list.length === 1 ? "event" : "events"}
+              </p>
+            )}
           </div>
         );
       })}
     </div>
+  );
+}
+
+function EventPill({
+  event,
+  timeFormat,
+}: {
+  event: EventResponse;
+  timeFormat: "12h" | "24h";
+}) {
+  const tooltip = [
+    event.title,
+    event.allDay
+      ? "All day"
+      : `${formatTime(event.startsAt, timeFormat)}–${formatTime(event.endsAt, timeFormat)}`,
+    event.location || undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <li
+      title={tooltip}
+      className="group flex items-center gap-1.5 rounded-md bg-surface px-1.5 py-1 text-xs ring-1 ring-divider/60 transition hover:ring-brand/40"
+    >
+      <span
+        aria-hidden
+        className="h-3 w-0.5 shrink-0 rounded-full bg-brand"
+      />
+      {event.allDay ? (
+        <span className="font-mono text-[10px] uppercase tracking-wide text-ink-subtle">
+          ALL
+        </span>
+      ) : (
+        <span className="font-mono text-[10px] tabular-nums text-ink-muted">
+          {formatTime(event.startsAt, timeFormat)}
+        </span>
+      )}
+      <span className="truncate text-ink">{event.title}</span>
+    </li>
   );
 }

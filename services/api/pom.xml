@@ -55,8 +55,13 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
+			<!-- Spring Boot 4 split autoconfig into per-feature modules.
+			     `flyway-core` alone no longer triggers FlywayAutoConfiguration,
+			     so the starter is required to pull in
+			     spring-boot-flyway-autoconfigure (and flyway-core, transitively).
+			     The PG-specific dialect dep stays explicit. -->
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>

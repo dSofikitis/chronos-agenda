@@ -55,29 +55,52 @@ jobs:
         working-directory: services/api
         run: ./mvnw -B -DskipTests package
 
+      - name: Verify Postgres is reachable from the runner
+        run: |
+          set -x
+          # The service container should expose 5432 on localhost for non-
+          # containerized jobs. If this can't connect, every later step is
+          # going to mystery-fail.
+          sudo apt-get install -y --no-install-recommends postgresql-client >/dev/null
+          PGPASSWORD=chronos psql -h localhost -U chronos -d chronos -c "SELECT 1;"
+
       - name: Start the API
         working-directory: services/api
         run: |
-          set -eu
-          # Spring Boot's plugin produces both `*.jar` (executable) and
-          # `*.jar.original` (plain). The `.original` doesn't end in .jar so
-          # this glob is safe, but be explicit anyway.
+          set -eux
           JAR=$(ls target/chronos-*.jar | grep -v '\.original$' | head -1)
           echo "Starting $JAR"
-          nohup java -jar "$JAR" > ../../api.log 2>&1 &
+          # Force-flushed stdout/stderr — Spring Boot defaults to buffered
+          # output which makes mid-wait log tails empty.
+          nohup stdbuf -oL -eL java -jar "$JAR" > ../../api.log 2>&1 &
           echo $! > ../../api.pid
+          sleep 3
+          echo "===== first 50 lines of api.log ====="
+          head -50 ../../api.log || true
 
       - name: Wait for API health
         run: |
+          set -u
           for i in $(seq 1 90); do
             if curl -sSf http://localhost:8080/actuator/health 2>/dev/null | grep -q '"UP"'; then
-              echo "API up after ${i}s × 2 = $((i*2))s"
+              echo "API up after $((i*2))s"
               exit 0
+            fi
+            # Every 20s show what the API has logged so a hung startup is
+            # visible in the run output instead of waiting for the artifact.
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "----- progress at $((i*2))s -----"
+              tail -40 api.log || true
             fi
             sleep 2
           done
           echo "::error::API failed to start within 180s"
-          tail -200 api.log
+          echo "===== full api.log ====="
+          cat api.log || true
+          echo "===== java process? ====="
+          ps -ef | grep -i java || true
+          echo "===== port 8080 listeners ====="
+          sudo ss -tlnp | grep 8080 || true
           exit 1
 
       - name: Install frontend deps

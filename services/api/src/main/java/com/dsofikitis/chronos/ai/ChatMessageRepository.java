@@ -12,8 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
     List<ChatMessage> findByUserIdOrderByCreatedAtDesc(UUID userId, Limit limit);
 
+    /** Returns the number of rows affected. Spring Data restricts @Modifying
+     *  return types to void / int / Integer — long is not accepted. */
     @Modifying
     @Transactional
     @Query("DELETE FROM ChatMessage m WHERE m.userId = :userId")
-    long deleteByUserId(@Param("userId") UUID userId);
+    int deleteByUserId(@Param("userId") UUID userId);
 }

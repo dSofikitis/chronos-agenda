@@ -89,13 +89,17 @@ public class AssistantService {
                 var reply = client.complete(turns, toolDefs, preamble);
 
                 if (reply.hasToolCalls()) {
+                    // Threaded into the in-flight conversation but NOT
+                    // persisted: replaying tool_use / tool_result pairs
+                    // across requests breaks Gemini's strict pairing rule
+                    // ("functionResponse must immediately follow
+                    // functionCall"). The model can re-fetch via tools on
+                    // the next turn if it needs the same data.
                     turns.add(reply);
-                    save(userId, "assistant", "", null, null);
                     for (var call : reply.toolCalls()) {
                         JsonNode result = tools.invoke(call.name(), call.input(), userId);
                         String resultStr = jsonToString(result);
                         turns.add(ChatTurn.toolResult(call.id(), call.name(), resultStr));
-                        save(userId, "tool", resultStr, call.name(), call.id());
                     }
                     continue;
                 }
@@ -119,7 +123,7 @@ public class AssistantService {
 
     /** Wipe a user's conversation history. Returns the row count deleted. */
     @Transactional
-    public long clearHistory(UUID userId) {
+    public int clearHistory(UUID userId) {
         return history.deleteByUserId(userId);
     }
 
@@ -191,12 +195,22 @@ public class AssistantService {
         Collections.reverse(rows);
         var turns = new ArrayList<ChatTurn>(rows.size());
         for (var row : rows) {
+            // Only replay user and final assistant text turns. Tool turns
+            // (and the empty-content assistant rows that older builds wrote
+            // alongside them) get filtered: replaying them across requests
+            // breaks Gemini's strict tool_use → tool_result pairing rule.
             switch (row.getRole()) {
-                case "user" -> turns.add(ChatTurn.user(row.getContent()));
-                case "assistant" -> turns.add(ChatTurn.assistantText(row.getContent()));
-                case "tool" -> turns.add(ChatTurn.toolResult(
-                        row.getToolCallId(), row.getToolName(), row.getContent()));
-                default -> { /* ignore unknown */ }
+                case "user" -> {
+                    if (row.getContent() != null && !row.getContent().isBlank()) {
+                        turns.add(ChatTurn.user(row.getContent()));
+                    }
+                }
+                case "assistant" -> {
+                    if (row.getContent() != null && !row.getContent().isBlank()) {
+                        turns.add(ChatTurn.assistantText(row.getContent()));
+                    }
+                }
+                default -> { /* drop "tool" rows + anything unknown */ }
             }
         }
         return turns;

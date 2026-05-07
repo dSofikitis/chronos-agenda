@@ -32,7 +32,7 @@ public class AssistantController {
 
     @DeleteMapping("/history")
     public Map<String, Object> clear(@CurrentUserId UUID userId) {
-        long deleted = assistant.clearHistory(userId);
+        int deleted = assistant.clearHistory(userId);
         return Map.of("deleted", deleted);
     }
 

@@ -122,5 +122,5 @@ function parseAnchor(raw: string | undefined): Date | null {
 function weekHeading(from: Date, to: Date): string {
   const fmt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   const end = new Date(to.getTime() - 1);
-  return `Week of ${from.toLocaleDateString(undefined, fmt)} – ${end.toLocaleDateString(undefined, fmt)}`;
+  return `${from.toLocaleDateString(undefined, fmt)} – ${end.toLocaleDateString(undefined, fmt)}`;
 }

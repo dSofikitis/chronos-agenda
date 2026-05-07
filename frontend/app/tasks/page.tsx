@@ -1,11 +1,11 @@
 import Link from "next/link";
 
+import { NewTaskForm } from "./NewTaskForm";
+import { TaskRow } from "./TaskRow";
 import { apiJson } from "@/lib/apiClient";
 import type { TaskResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-const PRIORITY_LABEL = ["Low", "Normal", "High"];
 
 export default async function TasksPage() {
   const tasks = await apiJson<TaskResponse[]>("/api/tasks?status=all").catch(
@@ -25,8 +25,10 @@ export default async function TasksPage() {
         </nav>
       </header>
 
+      <NewTaskForm />
+
       <Section title={`Open (${open.length})`} tasks={open} />
-      <Section title={`Done (${done.length})`} tasks={done} muted />
+      <Section title={`Done (${done.length})`} tasks={done} />
     </main>
   );
 }
@@ -34,34 +36,21 @@ export default async function TasksPage() {
 function Section({
   title,
   tasks,
-  muted = false,
 }: {
   title: string;
   tasks: TaskResponse[];
-  muted?: boolean;
 }) {
   return (
     <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
         {title}
       </h2>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-3 divide-y divide-zinc-800/60">
         {tasks.length === 0 && (
-          <li className="text-sm text-zinc-500">Nothing here.</li>
+          <li className="py-2 text-sm text-zinc-500">Nothing here.</li>
         )}
         {tasks.map((task) => (
-          <li
-            key={task.id}
-            className="flex items-baseline justify-between text-sm"
-          >
-            <span className={muted ? "text-zinc-500 line-through" : "text-zinc-200"}>
-              {task.title}
-            </span>
-            <span className="text-xs text-zinc-500">
-              {PRIORITY_LABEL[task.priority] ?? "?"}
-              {task.dueBy && ` · ${new Date(task.dueBy).toLocaleDateString()}`}
-            </span>
-          </li>
+          <TaskRow key={task.id} task={task} />
         ))}
       </ul>
     </section>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { NewEventForm } from "./NewEventForm";
 import { ChatPanel } from "@/components/ChatPanel";
 import { WeekView } from "@/components/WeekView";
 import { apiJson, ApiError } from "@/lib/apiClient";
@@ -38,6 +39,8 @@ export default async function AgendaPage() {
             <Link href="/settings" className="hover:text-zinc-100">Settings</Link>
           </nav>
         </header>
+
+        <NewEventForm />
 
         <WeekView from={from.toISOString()} events={events} />
 

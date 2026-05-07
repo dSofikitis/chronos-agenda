@@ -53,9 +53,9 @@ public class OllamaClient implements LlmClient {
     }
 
     @Override
-    public ChatTurn complete(List<ChatTurn> history, JsonNode tools) {
+    public ChatTurn complete(List<ChatTurn> history, JsonNode tools, String systemPreamble) {
         try {
-            var body = buildRequestBody(history, tools);
+            var body = buildRequestBody(history, tools, systemPreamble);
             var req = HttpRequest.newBuilder(URI.create(baseUrl + "/api/chat"))
                     .timeout(Duration.ofSeconds(120))
                     .header("Content-Type", "application/json")
@@ -73,14 +73,17 @@ public class OllamaClient implements LlmClient {
         }
     }
 
-    private ObjectNode buildRequestBody(List<ChatTurn> history, JsonNode tools) {
+    private ObjectNode buildRequestBody(List<ChatTurn> history, JsonNode tools, String systemPreamble) {
         var body = json.createObjectNode();
         body.put("model", model);
         body.put("stream", false);
         if (tools != null && tools.size() > 0) body.set("tools", tools);
 
+        var systemText = systemPreamble == null || systemPreamble.isBlank()
+                ? SYSTEM_PROMPT
+                : SYSTEM_PROMPT + "\n\n" + systemPreamble;
         ArrayNode messages = body.putArray("messages");
-        messages.addObject().put("role", "system").put("content", SYSTEM_PROMPT);
+        messages.addObject().put("role", "system").put("content", systemText);
 
         for (var turn : history) {
             if (turn.role() == ChatTurn.Role.SYSTEM) continue;

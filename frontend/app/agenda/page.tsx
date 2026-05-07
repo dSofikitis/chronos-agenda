@@ -1,20 +1,33 @@
 import { redirect } from "next/navigation";
 
 import { NewEventForm } from "./NewEventForm";
+import { WeekNav } from "@/components/WeekNav";
 import { WeekView } from "@/components/WeekView";
 import { apiJson, ApiError } from "@/lib/apiClient";
 import type { CurrentUser, EventResponse, TaskResponse } from "@/lib/types";
-import { startOfWeek, endOfWeek } from "@/lib/week";
+import { startOfWeek, endOfWeek, isSameDay } from "@/lib/week";
 
 export const dynamic = "force-dynamic";
 
-export default async function AgendaPage() {
+interface SearchParams {
+  week?: string;
+}
+
+export default async function AgendaPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const me = await fetchMe();
-  const now = new Date();
-  // Server always works in Monday-anchored math; the user's `weekStart`
-  // preference rotates the rendered grid client-side.
-  const from = startOfWeek(now);
-  const to = endOfWeek(now);
+  const params = await searchParams;
+  const today = new Date();
+
+  // ?week=YYYY-MM-DD selects which week to display. Anything off goes
+  // back to "this week" — defending against bad URLs.
+  const anchor = parseAnchor(params.week) ?? today;
+  const from = startOfWeek(anchor);
+  const to = endOfWeek(anchor);
+  const isCurrent = isSameDay(from, startOfWeek(today));
 
   const [events, tasks] = await Promise.all([
     apiJson<EventResponse[]>(
@@ -25,15 +38,24 @@ export default async function AgendaPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
-      <header className="space-y-1">
-        <p className="text-xs uppercase tracking-[0.18em] text-ink-subtle">
-          {weekRangeLabel(from, to)}
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Hi, {me.displayName.split(" ")[0]}.
-        </h1>
+      <header className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.18em] text-ink-subtle">
+              {weekRangeLabel(from, to)}
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {isCurrent
+                ? `Hi, ${me.displayName.split(" ")[0]}.`
+                : weekHeading(from, to)}
+            </h1>
+          </div>
+          <WeekNav weekStart={from} isCurrentWeek={isCurrent} />
+        </div>
         <p className="text-sm text-ink-muted">
-          Here&apos;s your week. Use the floating assistant in the corner — or{" "}
+          {isCurrent
+            ? "Here's your week. Use the floating assistant in the corner — or "
+            : "Browsing a different week. Use the floating assistant — or "}
           <kbd className="rounded border border-divider bg-surface-card px-1 py-0.5 text-[11px]">
             ⌘K
           </kbd>{" "}
@@ -90,8 +112,23 @@ async function fetchMe(): Promise<CurrentUser> {
   }
 }
 
+function parseAnchor(raw: string | undefined): Date | null {
+  if (!raw) return null;
+  // Accept YYYY-MM-DD (the format produced by the WeekNav links).
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.valueOf()) ? null : d;
+}
+
 function weekRangeLabel(from: Date, to: Date): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   const end = new Date(to.getTime() - 1);
   return `${from.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
+}
+
+function weekHeading(from: Date, to: Date): string {
+  const fmt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  const end = new Date(to.getTime() - 1);
+  return `Week of ${from.toLocaleDateString(undefined, fmt)} – ${end.toLocaleDateString(undefined, fmt)}`;
 }

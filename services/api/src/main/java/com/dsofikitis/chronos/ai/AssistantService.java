@@ -6,16 +6,20 @@ import com.dsofikitis.chronos.ai.llm.GeminiClient;
 import com.dsofikitis.chronos.ai.llm.LlmClient;
 import com.dsofikitis.chronos.ai.llm.LlmException;
 import com.dsofikitis.chronos.ai.llm.OllamaClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.dsofikitis.chronos.ai.tools.ToolRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
@@ -52,14 +56,27 @@ public class AssistantService {
         this.historyWindow = historyWindow;
     }
 
+    /**
+     * What the UI knows about the user's current view of the calendar — the
+     * week visible on /agenda and whether weekends are hidden. Optional;
+     * the assistant runs fine without it but produces sharper "this week"
+     * answers when it has it.
+     */
+    public record ViewContext(
+            LocalDate visibleWeekStart,
+            LocalDate visibleWeekEnd,
+            boolean hideWeekends) {
+    }
+
     /** Single non-streaming exchange. SSE streaming is a follow-up. */
     @Transactional
-    public AssistantReply chat(UUID userId, String userMessage) {
+    public AssistantReply chat(UUID userId, String userMessage, ViewContext view) {
         var client = pickClient();
         // Anthropic is the only backend whose tool wire-format differs from
         // OpenAI's. Gemini reuses the OpenAI shape and unwraps it inside the
         // GeminiClient.
         var toolDefs = client == anthropic ? tools.anthropicTools() : tools.openAiTools();
+        var preamble = buildSystemPreamble(view);
 
         // Persist the user turn first so failures still leave the question on record.
         save(userId, "user", userMessage, null, null);
@@ -69,7 +86,7 @@ public class AssistantService {
 
         try {
             for (int loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
-                var reply = client.complete(turns, toolDefs);
+                var reply = client.complete(turns, toolDefs, preamble);
 
                 if (reply.hasToolCalls()) {
                     turns.add(reply);
@@ -98,6 +115,49 @@ public class AssistantService {
                 + " tool calls without reaching a conclusion. Please rephrase the request.";
         save(userId, "assistant", stuck, null, null);
         return new AssistantReply(client.backend(), stuck);
+    }
+
+    /** Wipe a user's conversation history. Returns the row count deleted. */
+    @Transactional
+    public long clearHistory(UUID userId) {
+        return history.deleteByUserId(userId);
+    }
+
+    /**
+     * Backend-agnostic system preamble that pins the assistant to the user's
+     * actual "now" and what they're currently looking at. Without this Gemini
+     * in particular asks "what's today's date?" before answering anything
+     * relative.
+     */
+    private String buildSystemPreamble(ViewContext view) {
+        var now = ZonedDateTime.now();
+        var line = new StringBuilder();
+        var dow = now.format(DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH));
+        var date = now.format(DateTimeFormatter.ISO_LOCAL_DATE);
+        var time = now.format(DateTimeFormatter.ofPattern("HH:mm"));
+        line.append("Current context (do NOT ask the user for these):\n");
+        line.append("- Today is ").append(dow).append(", ").append(date)
+                .append(" — local time ").append(time)
+                .append(" ").append(now.getOffset().getId())
+                .append(" (").append(now.getZone().getId()).append(").\n");
+
+        if (view != null && view.visibleWeekStart() != null && view.visibleWeekEnd() != null) {
+            line.append("- The user is currently viewing the week ")
+                    .append(view.visibleWeekStart())
+                    .append(" → ")
+                    .append(view.visibleWeekEnd())
+                    .append(".\n");
+            if (view.hideWeekends()) {
+                line.append("- Weekends are hidden from their view; refer to ")
+                        .append("Monday–Friday only unless they explicitly mention Saturday or Sunday.\n");
+            }
+        }
+        line.append("Resolve relative phrases (\"this week\", \"tomorrow\", ")
+                .append("\"next Tuesday\") against today's date above. ")
+                .append("Always emit ISO-8601 datetimes with a timezone offset ")
+                .append("(e.g. ").append(date).append("T15:00:00")
+                .append(now.getOffset().getId()).append(").");
+        return line.toString();
     }
 
     /**

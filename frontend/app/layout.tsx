@@ -1,6 +1,7 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { AssistantBubble } from "@/components/AssistantBubble";
@@ -38,7 +39,12 @@ export default function RootLayout({
       <body className="min-h-screen font-sans antialiased">
         <PreferencesProvider>
           <AppShell>{children}</AppShell>
-          <AssistantBubble />
+          {/* Suspense boundary keeps the search-params hook inside the bubble
+              from forcing every static page (e.g. /_not-found) into dynamic
+              rendering at build time. */}
+          <Suspense fallback={null}>
+            <AssistantBubble />
+          </Suspense>
         </PreferencesProvider>
       </body>
     </html>

@@ -61,9 +61,9 @@ public class AnthropicClient implements LlmClient {
     }
 
     @Override
-    public ChatTurn complete(List<ChatTurn> history, JsonNode tools) {
+    public ChatTurn complete(List<ChatTurn> history, JsonNode tools, String systemPreamble) {
         try {
-            var body = buildRequestBody(history, tools);
+            var body = buildRequestBody(history, tools, systemPreamble);
             var req = HttpRequest.newBuilder(URI.create(baseUrl + "/v1/messages"))
                     .timeout(Duration.ofSeconds(60))
                     .header("Content-Type", "application/json")
@@ -83,11 +83,11 @@ public class AnthropicClient implements LlmClient {
         }
     }
 
-    private ObjectNode buildRequestBody(List<ChatTurn> history, JsonNode tools) {
+    private ObjectNode buildRequestBody(List<ChatTurn> history, JsonNode tools, String systemPreamble) {
         var body = json.createObjectNode();
         body.put("model", model);
         body.put("max_tokens", maxTokens);
-        body.put("system", SYSTEM_PROMPT);
+        body.put("system", composeSystem(systemPreamble));
         if (tools != null && tools.size() > 0) body.set("tools", tools);
 
         ArrayNode messages = body.putArray("messages");
@@ -122,6 +122,12 @@ public class AnthropicClient implements LlmClient {
             }
         }
         return body;
+    }
+
+    private static String composeSystem(String preamble) {
+        return preamble == null || preamble.isBlank()
+                ? SYSTEM_PROMPT
+                : SYSTEM_PROMPT + "\n\n" + preamble;
     }
 
     private ChatTurn parseResponse(JsonNode resp) {

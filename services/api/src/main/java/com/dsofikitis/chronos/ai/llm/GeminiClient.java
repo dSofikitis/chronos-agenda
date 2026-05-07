@@ -64,9 +64,9 @@ public class GeminiClient implements LlmClient {
     }
 
     @Override
-    public ChatTurn complete(List<ChatTurn> history, JsonNode tools) {
+    public ChatTurn complete(List<ChatTurn> history, JsonNode tools, String systemPreamble) {
         try {
-            var body = buildRequestBody(history, tools);
+            var body = buildRequestBody(history, tools, systemPreamble);
             var uri = URI.create(baseUrl + "/v1beta/models/" + model + ":generateContent");
             var req = HttpRequest.newBuilder(uri)
                     .timeout(Duration.ofSeconds(60))
@@ -86,12 +86,15 @@ public class GeminiClient implements LlmClient {
         }
     }
 
-    private ObjectNode buildRequestBody(List<ChatTurn> history, JsonNode tools) {
+    private ObjectNode buildRequestBody(List<ChatTurn> history, JsonNode tools, String systemPreamble) {
         var body = json.createObjectNode();
 
         // System instruction is a top-level field, not a content turn.
+        var systemText = systemPreamble == null || systemPreamble.isBlank()
+                ? SYSTEM_PROMPT
+                : SYSTEM_PROMPT + "\n\n" + systemPreamble;
         var sys = body.putObject("systemInstruction");
-        sys.putArray("parts").addObject().put("text", SYSTEM_PROMPT);
+        sys.putArray("parts").addObject().put("text", systemText);
 
         ArrayNode contents = body.putArray("contents");
         for (var turn : history) {

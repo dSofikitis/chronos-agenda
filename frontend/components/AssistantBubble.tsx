@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -9,9 +10,20 @@ import {
   useTransition,
 } from "react";
 
-import { sendAssistantMessage } from "@/app/_actions/assistant";
-import { CloseIcon, CommandIcon, SendIcon, SparkleIcon } from "@/components/icons";
+import {
+  clearAssistantHistoryAction,
+  sendAssistantMessage,
+  type ChatContext,
+} from "@/app/_actions/assistant";
+import {
+  CloseIcon,
+  CommandIcon,
+  SendIcon,
+  SparkleIcon,
+  TrashIcon,
+} from "@/components/icons";
 import { usePreferences } from "@/components/PreferencesProvider";
+import { addDays, startOfWeek } from "@/lib/week";
 
 interface Message {
   id: number;
@@ -29,6 +41,7 @@ const SUGGESTIONS = [
 
 export function AssistantBubble() {
   const { prefs } = usePreferences();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -73,6 +86,19 @@ export function AssistantBubble() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  const buildContext = useCallback((): ChatContext => {
+    const weekParam = searchParams?.get("week");
+    const monday = weekParam
+      ? startOfWeek(new Date(weekParam))
+      : startOfWeek(new Date());
+    const sunday = addDays(monday, 6);
+    return {
+      visibleWeekStart: toIsoDate(monday),
+      visibleWeekEnd: toIsoDate(sunday),
+      hideWeekends: prefs.hideWeekends,
+    };
+  }, [searchParams, prefs.hideWeekends]);
+
   const submit = useCallback(
     (text: string) => {
       const trimmed = text.trim();
@@ -83,9 +109,11 @@ export function AssistantBubble() {
       setDraft("");
       setError(null);
 
+      const ctx = buildContext();
+
       startTransition(async () => {
         try {
-          const reply = await sendAssistantMessage(trimmed);
+          const reply = await sendAssistantMessage(trimmed, ctx);
           setMessages((m) => [
             ...m,
             {
@@ -100,12 +128,27 @@ export function AssistantBubble() {
         }
       });
     },
-    [isPending],
+    [isPending, buildContext],
   );
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submit(draft);
+  };
+
+  const onClear = () => {
+    if (isPending) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await clearAssistantHistoryAction();
+        setMessages([]);
+        setDraft("");
+        inputRef.current?.focus();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    });
   };
 
   return (
@@ -144,14 +187,26 @@ export function AssistantBubble() {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Close assistant"
-              className="rounded-md p-1 text-ink-muted hover:bg-surface-card hover:text-ink"
-            >
-              <CloseIcon width={16} height={16} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onClear}
+                aria-label="Clear conversation"
+                title="Clear conversation"
+                disabled={isPending}
+                className="rounded-md p-1 text-ink-muted transition hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+              >
+                <TrashIcon width={14} height={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close assistant"
+                className="rounded-md p-1 text-ink-muted hover:bg-surface-card hover:text-ink"
+              >
+                <CloseIcon width={16} height={16} />
+              </button>
+            </div>
           </header>
 
           <div className="max-h-[55vh] flex-1 overflow-y-auto px-4 py-3">
@@ -261,4 +316,9 @@ function SuggestionList({
       </ul>
     </div>
   );
+}
+
+function toIsoDate(d: Date): string {
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }

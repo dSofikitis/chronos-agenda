@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /src
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
@@ -7,7 +7,7 @@ COPY src ./src
 RUN ./mvnw -B -q -DskipTests package && \
     cp target/*.jar /app.jar
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 RUN addgroup -S svc && adduser -S svc -G svc
 COPY --from=build /app.jar /app/app.jar

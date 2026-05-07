@@ -1,6 +1,59 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Tailwind v4 auto-detects content from imports + heuristics, but make the
+   project surface explicit since this CSS file is the entry point. */
+@source "../app";
+@source "../components";
+
+/* Class-based dark mode (matches the `dark` class set on <html> by the
+   PreferencesProvider + the no-flash inline script). v4 default would be
+   the `prefers-color-scheme` media query alone. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Theme tokens — v4's CSS-first config. These map automatically to
+   `bg-*`, `text-*`, `border-*`, `ring-*`, etc. utilities. The actual RGB
+   triplets stay in `:root` / `html.dark` blocks below so the values can
+   swap with the theme without rebuilding the bundle. */
+@theme {
+  --font-sans:
+    "Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI",
+    "Roboto", "sans-serif";
+
+  --color-surface:           rgb(var(--c-surface));
+  --color-surface-card:      rgb(var(--c-surface-card));
+  --color-surface-input:     rgb(var(--c-surface-input));
+  --color-surface-elevated:  rgb(var(--c-surface-elevated));
+  --color-ink:               rgb(var(--c-ink));
+  --color-ink-muted:         rgb(var(--c-ink-muted));
+  --color-ink-subtle:        rgb(var(--c-ink-subtle));
+  --color-divider:           rgb(var(--c-divider));
+  --color-brand:             rgb(var(--c-brand));
+  --color-brand-fg:          rgb(var(--c-brand-fg));
+  --color-brand-soft:        rgb(var(--c-brand) / 0.12);
+  --color-danger:            rgb(var(--c-danger));
+  --color-danger-soft:       rgb(var(--c-danger) / 0.12);
+  --color-success:           rgb(var(--c-success));
+  --color-success-soft:      rgb(var(--c-success) / 0.12);
+
+  --shadow-bubble:
+    0 10px 30px -8px rgb(var(--c-brand) / 0.40),
+    0 6px 14px -4px rgb(0 0 0 / 0.30);
+  --shadow-soft:
+    0 1px 2px 0 rgb(0 0 0 / 0.04),
+    0 1px 3px 0 rgb(0 0 0 / 0.06);
+
+  --animate-bubble-pop: bubble-pop 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-fade-in:    fade-in 120ms ease-out;
+}
+
+@keyframes bubble-pop {
+  0% { transform: translateY(8px) scale(0.96); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
 
 /* Light mode (default). All colors are RGB triplets so Tailwind's
    /<alpha-value> pattern can compose them with opacity. */
@@ -41,7 +94,7 @@ html.dark {
 /* Default UI scale = 80% of the browser's normal size — matches what
    Zen looks like at its 80% zoom. Every rem-based Tailwind utility (text,
    spacing, max-width, border-radius) shrinks proportionally; literal-px
-   sizes stay crisp. Override per-OS by changing the browser zoom. */
+   sizes stay crisp. */
 html {
   font-size: 80%;
 }
@@ -57,8 +110,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Smoother color transitions when toggling theme. Excluded from
-   transform/opacity changes so animations stay snappy. */
+/* Smoother color transitions when toggling theme. */
 html {
   transition: background-color 200ms ease, color 200ms ease;
 }
@@ -73,57 +125,33 @@ html {
 
 /* Markdown rendering inside chat bubbles. Scoped under `.chat-md` so the
    styles never leak into other prose. The selectors stay specificity-light
-   (no @apply nesting) on purpose — the chat surface should defer to the
-   surrounding bubble layout for size and color. */
+   on purpose — the chat surface should defer to the surrounding bubble
+   layout for size and color. */
 @layer components {
   .chat-md > :first-child { margin-top: 0; }
-  .chat-md > :last-child { margin-bottom: 0; }
+  .chat-md > :last-child  { margin-bottom: 0; }
 
-  .chat-md p {
-    @apply my-1 leading-relaxed;
-  }
-  .chat-md ul {
-    @apply my-1 list-disc space-y-0.5 pl-5;
-  }
-  .chat-md ol {
-    @apply my-1 list-decimal space-y-0.5 pl-5;
-  }
-  .chat-md li > p {
-    @apply my-0;
-  }
-  .chat-md ul.contains-task-list {
-    @apply list-none pl-0;
-  }
-  .chat-md strong { @apply font-semibold; }
-  .chat-md em { @apply italic; }
-  .chat-md h1, .chat-md h2, .chat-md h3, .chat-md h4 {
-    @apply my-2 text-sm font-semibold;
-  }
-  .chat-md a {
-    @apply text-brand underline underline-offset-2 hover:brightness-110;
-  }
-  .chat-md blockquote {
-    @apply my-1 border-l-2 border-divider pl-3 italic text-ink-muted;
-  }
-  .chat-md hr {
-    @apply my-2 border-divider;
-  }
-  .chat-md code {
-    @apply rounded bg-surface/60 px-1 py-0.5 font-mono text-[0.85em];
-  }
-  .chat-md pre {
-    @apply my-2 overflow-x-auto rounded-lg bg-surface p-3 font-mono text-xs;
-  }
-  .chat-md pre code {
-    @apply bg-transparent px-0 py-0;
-  }
-  .chat-md table {
-    @apply my-2 border-collapse text-xs;
-  }
-  .chat-md th, .chat-md td {
-    @apply border border-divider px-2 py-1;
-  }
-  .chat-md th { @apply font-medium; }
+  .chat-md p           { @apply my-1 leading-relaxed; }
+  .chat-md ul          { @apply my-1 list-disc space-y-0.5 pl-5; }
+  .chat-md ol          { @apply my-1 list-decimal space-y-0.5 pl-5; }
+  .chat-md li > p      { @apply my-0; }
+  .chat-md ul.contains-task-list { @apply list-none pl-0; }
+  .chat-md strong      { @apply font-semibold; }
+  .chat-md em          { @apply italic; }
+  .chat-md h1,
+  .chat-md h2,
+  .chat-md h3,
+  .chat-md h4          { @apply my-2 text-sm font-semibold; }
+  .chat-md a           { @apply text-brand underline underline-offset-2 hover:brightness-110; }
+  .chat-md blockquote  { @apply my-1 border-l-2 border-divider pl-3 italic text-ink-muted; }
+  .chat-md hr          { @apply my-2 border-divider; }
+  .chat-md code        { @apply rounded bg-surface/60 px-1 py-0.5 font-mono text-[0.85em]; }
+  .chat-md pre         { @apply my-2 overflow-x-auto rounded-lg bg-surface p-3 font-mono text-xs; }
+  .chat-md pre code    { @apply bg-transparent px-0 py-0; }
+  .chat-md table       { @apply my-2 border-collapse text-xs; }
+  .chat-md th,
+  .chat-md td          { @apply border border-divider px-2 py-1; }
+  .chat-md th          { @apply font-medium; }
 }
 
 /* Subtle scrollbars in dark mode. */

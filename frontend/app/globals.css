@@ -38,6 +38,14 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Default UI scale = 80% of the browser's normal size — matches what
+   Zen looks like at its 80% zoom. Every rem-based Tailwind utility (text,
+   spacing, max-width, border-radius) shrinks proportionally; literal-px
+   sizes stay crisp. Override per-OS by changing the browser zoom. */
+html {
+  font-size: 80%;
+}
+
 html, body {
   background: rgb(var(--c-surface));
   color: rgb(var(--c-ink));
@@ -61,6 +69,61 @@ html {
 }
 [data-density="comfortable"] .density-pad {
   padding-block: 0.75rem;
+}
+
+/* Markdown rendering inside chat bubbles. Scoped under `.chat-md` so the
+   styles never leak into other prose. The selectors stay specificity-light
+   (no @apply nesting) on purpose — the chat surface should defer to the
+   surrounding bubble layout for size and color. */
+@layer components {
+  .chat-md > :first-child { margin-top: 0; }
+  .chat-md > :last-child { margin-bottom: 0; }
+
+  .chat-md p {
+    @apply my-1 leading-relaxed;
+  }
+  .chat-md ul {
+    @apply my-1 list-disc space-y-0.5 pl-5;
+  }
+  .chat-md ol {
+    @apply my-1 list-decimal space-y-0.5 pl-5;
+  }
+  .chat-md li > p {
+    @apply my-0;
+  }
+  .chat-md ul.contains-task-list {
+    @apply list-none pl-0;
+  }
+  .chat-md strong { @apply font-semibold; }
+  .chat-md em { @apply italic; }
+  .chat-md h1, .chat-md h2, .chat-md h3, .chat-md h4 {
+    @apply my-2 text-sm font-semibold;
+  }
+  .chat-md a {
+    @apply text-brand underline underline-offset-2 hover:brightness-110;
+  }
+  .chat-md blockquote {
+    @apply my-1 border-l-2 border-divider pl-3 italic text-ink-muted;
+  }
+  .chat-md hr {
+    @apply my-2 border-divider;
+  }
+  .chat-md code {
+    @apply rounded bg-surface/60 px-1 py-0.5 font-mono text-[0.85em];
+  }
+  .chat-md pre {
+    @apply my-2 overflow-x-auto rounded-lg bg-surface p-3 font-mono text-xs;
+  }
+  .chat-md pre code {
+    @apply bg-transparent px-0 py-0;
+  }
+  .chat-md table {
+    @apply my-2 border-collapse text-xs;
+  }
+  .chat-md th, .chat-md td {
+    @apply border border-divider px-2 py-1;
+  }
+  .chat-md th { @apply font-medium; }
 }
 
 /* Subtle scrollbars in dark mode. */

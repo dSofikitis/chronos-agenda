@@ -17,11 +17,11 @@ import {
 } from "@/app/_actions/assistant";
 import {
   CloseIcon,
-  CommandIcon,
   SendIcon,
   SparkleIcon,
   TrashIcon,
 } from "@/components/icons";
+import { MarkdownMessage } from "@/components/MarkdownMessage";
 import { usePreferences } from "@/components/PreferencesProvider";
 import { addDays, startOfWeek } from "@/lib/week";
 
@@ -228,7 +228,11 @@ export function AssistantBubble() {
                         {msg.backend}
                       </p>
                     )}
-                    <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                    {msg.role === "assistant" ? (
+                      <MarkdownMessage text={msg.text} />
+                    ) : (
+                      <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                    )}
                   </li>
                 ))}
                 {isPending && (

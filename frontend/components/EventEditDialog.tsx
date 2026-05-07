@@ -23,6 +23,8 @@ export function EventEditDialog({ event, onClose }: Props) {
   const [title, setTitle] = useState(event.title);
   const [startsAt, setStartsAt] = useState(toLocalInput(event.startsAt));
   const [endsAt, setEndsAt] = useState(toLocalInput(event.endsAt));
+  const [startDate, setStartDate] = useState(toLocalDate(event.startsAt));
+  const [endDate, setEndDate] = useState(toLocalDate(event.endsAt));
   const [allDay, setAllDay] = useState(event.allDay);
   const [location, setLocation] = useState(event.location ?? "");
   const [notes, setNotes] = useState(event.notes ?? "");
@@ -49,14 +51,21 @@ export function EventEditDialog({ event, onClose }: Props) {
     if (!title.trim() || isPending) return;
     setError(null);
 
-    const start = new Date(startsAt);
-    const end = new Date(endsAt);
+    let start: Date;
+    let end: Date;
+    if (allDay) {
+      start = startOfLocalDay(startDate);
+      end = endOfLocalDay(endDate || startDate);
+    } else {
+      start = new Date(startsAt);
+      end = new Date(endsAt);
+    }
     if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf())) {
-      setError("Start and end must be valid datetimes.");
+      setError("Start and end must be valid dates.");
       return;
     }
     if (end.getTime() < start.getTime()) {
-      setError("End time can't be before start time.");
+      setError(allDay ? "End date can't be before start date." : "End time can't be before start time.");
       return;
     }
 
@@ -134,27 +143,6 @@ export function EventEditDialog({ event, onClose }: Props) {
             />
           </Field>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Starts">
-              <input
-                type="datetime-local"
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                className="w-full rounded-xl bg-surface-input px-3 py-2 text-sm text-ink outline-none ring-1 ring-divider focus:ring-brand"
-                disabled={isPending}
-              />
-            </Field>
-            <Field label="Ends">
-              <input
-                type="datetime-local"
-                value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
-                className="w-full rounded-xl bg-surface-input px-3 py-2 text-sm text-ink outline-none ring-1 ring-divider focus:ring-brand"
-                disabled={isPending}
-              />
-            </Field>
-          </div>
-
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -165,6 +153,58 @@ export function EventEditDialog({ event, onClose }: Props) {
             />
             <span className="text-ink">All-day event</span>
           </label>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {allDay ? (
+              <>
+                <Field label="Starts">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      if (!endDate || endDate < e.target.value) {
+                        setEndDate(e.target.value);
+                      }
+                    }}
+                    className="w-full rounded-xl bg-surface-input px-3 py-2 text-sm text-ink outline-none ring-1 ring-divider focus:ring-brand"
+                    disabled={isPending}
+                  />
+                </Field>
+                <Field label="Ends">
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full rounded-xl bg-surface-input px-3 py-2 text-sm text-ink outline-none ring-1 ring-divider focus:ring-brand"
+                    disabled={isPending}
+                  />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Field label="Starts">
+                  <input
+                    type="datetime-local"
+                    value={startsAt}
+                    onChange={(e) => setStartsAt(e.target.value)}
+                    className="w-full rounded-xl bg-surface-input px-3 py-2 text-sm text-ink outline-none ring-1 ring-divider focus:ring-brand"
+                    disabled={isPending}
+                  />
+                </Field>
+                <Field label="Ends">
+                  <input
+                    type="datetime-local"
+                    value={endsAt}
+                    onChange={(e) => setEndsAt(e.target.value)}
+                    className="w-full rounded-xl bg-surface-input px-3 py-2 text-sm text-ink outline-none ring-1 ring-divider focus:ring-brand"
+                    disabled={isPending}
+                  />
+                </Field>
+              </>
+            )}
+          </div>
 
           <Field label="Location">
             <input
@@ -247,4 +287,22 @@ function toLocalInput(iso: string): string {
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
     `T${pad(d.getHours())}:${pad(d.getMinutes())}`
   );
+}
+
+/** Convert an ISO datetime to the `YYYY-MM-DD` shape <input type="date"> wants. */
+function toLocalDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.valueOf())) return "";
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function startOfLocalDay(yyyymmdd: string): Date {
+  const [y, m, d] = yyyymmdd.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+function endOfLocalDay(yyyymmdd: string): Date {
+  const [y, m, d] = yyyymmdd.split("-").map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999);
 }

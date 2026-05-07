@@ -7,6 +7,7 @@ import {
   updateTaskAction,
 } from "@/app/tasks/actions";
 import { CloseIcon, TrashIcon } from "@/components/icons";
+import { Portal } from "@/components/Portal";
 import type { TaskResponse } from "@/lib/types";
 
 interface Props {
@@ -83,8 +84,9 @@ export function TaskEditDialog({ task, onClose }: Props) {
   };
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-4 backdrop-blur-md animate-fade-in"
       onMouseDown={onBackdrop}
       role="presentation"
     >
@@ -217,6 +219,7 @@ export function TaskEditDialog({ task, onClose }: Props) {
         </form>
       </div>
     </div>
+    </Portal>
   );
 }
 

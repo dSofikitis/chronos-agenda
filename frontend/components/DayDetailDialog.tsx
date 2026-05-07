@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { CloseIcon } from "@/components/icons";
+import { Portal } from "@/components/Portal";
 import { formatTime } from "@/lib/format";
 import type { TimeFormat } from "@/lib/preferences";
 import type { EventResponse } from "@/lib/types";
@@ -54,10 +55,11 @@ export function DayDetailDialog({
   });
 
   return (
+    <Portal>
     <div
       role="presentation"
       onMouseDown={onBackdrop}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-4 backdrop-blur-md animate-fade-in"
     >
       <div
         ref={dialogRef}
@@ -175,5 +177,6 @@ export function DayDetailDialog({
         </footer>
       </div>
     </div>
+    </Portal>
   );
 }

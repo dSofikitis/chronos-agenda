@@ -110,7 +110,7 @@ public class AssistantService {
             }
         } catch (LlmException e) {
             log.warn("LLM call failed via {}: {}", client.backend(), e.getMessage());
-            var msg = friendlyLlmError(client);
+            var msg = friendlyLlmError(client, e);
             save(userId, "assistant", msg, null, null);
             return new AssistantReply("system", msg);
         }
@@ -170,7 +170,7 @@ public class AssistantService {
      * common case in local dev — no key set, no Ollama running, channel
      * dies on connect.
      */
-    private String friendlyLlmError(LlmClient client) {
+    private String friendlyLlmError(LlmClient client, LlmException e) {
         if (client == ollama) {
             return "I'm not configured with an LLM backend yet. Set "
                     + "AGENT_MODE=gemini (or claude) and AGENT_KEY=<your-key> in "
@@ -178,10 +178,51 @@ public class AssistantService {
                     + "fall back to a local Ollama on http://localhost:11434, "
                     + "which doesn't appear to be running.";
         }
-        return "The "
-                + client.backend()
-                + " backend rejected the request. Double-check that AGENT_KEY is "
+
+        var name = capitalize(client.backend());
+        var msg = e.getMessage() == null ? "" : e.getMessage();
+
+        // Rate limit (free-tier quota or burst). Surface the retry-after
+        // hint when the provider gives one — Gemini does, Anthropic
+        // sometimes does in the body.
+        if (msg.contains(" 429") || msg.contains("RESOURCE_EXHAUSTED")
+                || msg.contains("rate_limit") || msg.contains("rate-limit")) {
+            var retry = parseRetryHint(msg);
+            return name + " is rate-limiting requests" + retry
+                    + ". Free tiers cap requests per minute; either wait a "
+                    + "moment, switch to a paid plan, or pick a different "
+                    + "model via CHRONOS_GEMINI_MODEL / CHRONOS_CLAUDE_MODEL.";
+        }
+        if (msg.contains(" 401") || msg.contains(" 403")
+                || msg.toLowerCase().contains("unauthorized")) {
+            return name + " rejected the API key. Check that AGENT_KEY in "
+                    + ".env is current and active for this provider.";
+        }
+        if (msg.contains(" 404") || msg.toLowerCase().contains("model not found")) {
+            return name + " couldn't find the requested model. Set "
+                    + "CHRONOS_" + client.backend().toUpperCase()
+                    + "_MODEL to a model id this provider supports.";
+        }
+        return name + " returned an error. Double-check that AGENT_KEY is "
                 + "valid and the model id is one this provider supports.";
+    }
+
+    /** Pull "Please retry in 12.4s" out of provider 429 bodies. */
+    private static String parseRetryHint(String body) {
+        var m = java.util.regex.Pattern.compile("retry in ([0-9.]+)\\s*s")
+                .matcher(body);
+        if (!m.find()) return "";
+        try {
+            long secs = Math.round(Double.parseDouble(m.group(1)));
+            return " — please retry in ~" + secs + "s";
+        } catch (NumberFormatException ex) {
+            return "";
+        }
+    }
+
+    private static String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s == null ? "" : s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private LlmClient pickClient() {

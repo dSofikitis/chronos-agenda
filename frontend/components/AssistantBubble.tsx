@@ -277,8 +277,10 @@ export function AssistantBubble() {
           )}
           {prefs.assistantHotkey && (
             <p className="flex items-center justify-end gap-1 border-t border-divider bg-surface-card/60 px-3 py-1.5 text-[10px] text-ink-subtle">
-              <CommandIcon width={11} height={11} className="-mt-px" />
-              <span>K to toggle · Enter to send · Shift-Enter for newline</span>
+              <span>
+                <kbd className="rounded border border-divider bg-surface-card px-1 py-0.5 text-[11px]">
+                  ⌘K
+                </kbd> to toggle · Enter to send · Shift-Enter for newline</span>
             </p>
           )}
         </div>

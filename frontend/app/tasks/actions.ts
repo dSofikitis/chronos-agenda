@@ -42,6 +42,27 @@ export async function toggleTaskAction(
   return updated;
 }
 
+export interface UpdateTaskInput {
+  title?: string;
+  dueBy?: string | null;
+  priority?: number;
+  status?: "open" | "done";
+  notes?: string;
+}
+
+export async function updateTaskAction(
+  id: string,
+  input: UpdateTaskInput,
+): Promise<TaskResponse> {
+  const updated = await apiJson<TaskResponse>(`/api/tasks/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+  revalidatePath("/tasks");
+  revalidatePath("/agenda");
+  return updated;
+}
+
 export async function deleteTaskAction(id: string): Promise<void> {
   await apiJson<void>(`/api/tasks/${id}`, { method: "DELETE" });
   revalidatePath("/tasks");

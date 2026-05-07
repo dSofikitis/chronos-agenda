@@ -13,8 +13,8 @@
   --c-ink-muted: 82 82 91;
   --c-ink-subtle: 113 113 122;
   --c-divider: 228 228 231;
-  --c-brand-light: 59 130 246;
-  --c-brand-dark: 96 165 250;
+  --c-brand-light: 239 68 68;
+  --c-brand-dark: 248 113 113;
   --c-brand: var(--c-brand-light);
   --c-brand-fg: 255 255 255;
   --c-danger: 244 63 94;

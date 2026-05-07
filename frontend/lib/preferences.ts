@@ -5,7 +5,7 @@
  */
 
 export type ThemeMode = "light" | "dark" | "system";
-export type AccentName = "blue" | "violet" | "emerald" | "rose" | "amber";
+export type AccentName = "red" | "blue" | "violet" | "emerald" | "rose" | "amber";
 export type Density = "comfortable" | "compact";
 export type TimeFormat = "12h" | "24h";
 export type WeekStart = "monday" | "sunday";
@@ -23,7 +23,7 @@ export interface Preferences {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: "system",
-  accent: "blue",
+  accent: "red",
   density: "comfortable",
   timeFormat: "24h",
   weekStart: "monday",
@@ -33,6 +33,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
 };
 
 export const ACCENT_PRESETS: Record<AccentName, { label: string; hex: string; light: string; dark: string }> = {
+  red: { label: "Red", hex: "#ef4444", light: "239 68 68", dark: "248 113 113" },
   blue: { label: "Blue", hex: "#3b82f6", light: "59 130 246", dark: "96 165 250" },
   violet: { label: "Violet", hex: "#8b5cf6", light: "139 92 246", dark: "167 139 250" },
   emerald: { label: "Emerald", hex: "#10b981", light: "16 185 129", dark: "52 211 153" },
